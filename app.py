@@ -14,15 +14,18 @@ file = st.file_uploader("📂 Upload Excel", type=["xlsx"])
 
 if file is not None:
     path = os.path.join(DATA_PATH, file.name)
-    with open(path, "wb") as f:
-        f.write(file.getbuffer())
 
-    st.success("✅ Upload thành công")
+    # lưu lịch sử (không ghi đè)
+    if not os.path.exists(path):
+        with open(path, "wb") as f:
+            f.write(file.getbuffer())
+
+    st.success("✅ Upload thành công (đã lưu lịch sử)")
     st.cache_data.clear()
     st.rerun()
 
 
-# ================= AUTO READ =================
+# ================= ĐỌC FILE THÔNG MINH =================
 @st.cache_data
 def read_excel_smart(path):
     xl = pd.ExcelFile(path)
@@ -31,14 +34,12 @@ def read_excel_smart(path):
         try:
             df_raw = pd.read_excel(path, sheet_name=sheet, header=None)
 
-            # tìm dòng chứa header thật
             for i in range(0, 30):
-                row_text = " ".join(df_raw.iloc[i].astype(str)).lower()
+                row = " ".join(df_raw.iloc[i].astype(str)).lower()
 
-                if "kh" in row_text or "khách" in row_text:
+                if "kh" in row or "khách" in row:
                     df = pd.read_excel(path, sheet_name=sheet, header=i)
 
-                    # nếu có dữ liệu thật thì return luôn
                     if df.shape[1] > 5:
                         return df
 
@@ -48,7 +49,7 @@ def read_excel_smart(path):
     return pd.DataFrame()
 
 
-# ================= LOAD =================
+# ================= LOAD DATA =================
 @st.cache_data
 def load_data():
     files = os.listdir(DATA_PATH)
@@ -61,14 +62,14 @@ def load_data():
     for f in files:
         try:
             path = os.path.join(DATA_PATH, f)
-
             df = read_excel_smart(path)
 
             if not df.empty:
+                df["Nguồn file"] = f  # lưu lịch sử file
                 all_df.append(df)
 
-        except Exception as e:
-            st.error(f"Lỗi file {f}: {e}")
+        except:
+            continue
 
     if not all_df:
         return pd.DataFrame()
@@ -78,10 +79,6 @@ def load_data():
     # ===== CLEAN =====
     df.columns = df.columns.astype(str).str.strip()
 
-    # ===== DEBUG =====
-    st.write("📌 Columns:", df.columns.tolist())
-    st.write("📊 Shape:", df.shape)
-
     # ===== RENAME =====
     df.rename(columns={
         "Tên KH": "Tên khách hàng",
@@ -89,32 +86,19 @@ def load_data():
         "Tên khách": "Tên khách hàng",
         "Ngày CT": "Ngày chứng từ",
         "Ngày": "Ngày chứng từ",
-        "Địa chỉ giao hàng": "Nơi giao hàng"
+        "Địa chỉ giao hàng": "Nơi giao hàng",
+        "Tên mã hàng": "Tên mã hàng"
     }, inplace=True)
 
-    # ===== CHECK =====
     if "Tên khách hàng" not in df.columns:
-        st.error("❌ Không nhận diện được file")
         return pd.DataFrame()
 
-    # ===== FIX DATA =====
+    # ===== XỬ LÝ =====
     df["Ngày chứng từ"] = pd.to_datetime(df["Ngày chứng từ"], errors="coerce")
     df["Tháng"] = df["Ngày chứng từ"].dt.strftime("%Y-%m")
 
     df["Thành tiền bán"] = pd.to_numeric(df.get("Thành tiền bán", 0), errors="coerce")
-    df["Nơi giao hàng"] = df.get("Nơi giao hàng", "").astype(str)
-
-    # ===== GỘP TỈNH =====
-    df["Tỉnh"] = "Khác"
-    df.loc[df["Nơi giao hàng"].str.contains("hcm", case=False, na=False), "Tỉnh"] = "TP HCM"
-    df.loc[df["Nơi giao hàng"].str.contains("hà nội", case=False, na=False), "Tỉnh"] = "Hà Nội"
-    df.loc[df["Nơi giao hàng"].str.contains("bình dương", case=False, na=False), "Tỉnh"] = "Bình Dương"
-    df.loc[df["Nơi giao hàng"].str.contains("đồng nai", case=False, na=False), "Tỉnh"] = "Đồng Nai"
-
-    # ===== XE =====
-    df["Biển số xe"] = df.get("Biển số xe", "").astype(str)
-    df["Biển số xe"] = df["Biển số xe"].str.replace(" ", "").str.upper()
-    df = df[df["Biển số xe"].str.len().between(7, 9)]
+    df["Tên mã hàng"] = df.get("Tên mã hàng", "Không rõ")
 
     return df
 
@@ -122,34 +106,59 @@ def load_data():
 df = load_data()
 
 if df.empty:
-    st.error("❌ Không đọc được dữ liệu từ file")
+    st.warning("⚠️ Chưa có dữ liệu")
     st.stop()
 
 # ================= FILTER =================
 kh_list = df["Tên khách hàng"].dropna().unique()
-
-if len(kh_list) == 0:
-    st.error("❌ Không có khách hàng")
-    st.stop()
 
 kh = st.selectbox("👤 Chọn khách hàng", kh_list)
 df_kh = df[df["Tên khách hàng"] == kh]
 
 # ================= KPI =================
 c1, c2, c3 = st.columns(3)
+
 c1.metric("💰 Doanh thu", f"{df_kh['Thành tiền bán'].sum():,.0f}")
 c2.metric("📦 Số đơn", len(df_kh))
-c3.metric("🚚 Số xe", df_kh["Biển số xe"].nunique())
+c3.metric("📁 Số file", df_kh["Nguồn file"].nunique())
 
-# ================= BIỂU ĐỒ =================
+# ================= DOANH THU THEO THÁNG =================
 st.subheader("📈 Doanh thu theo tháng")
+
 dt = df_kh.groupby("Tháng")["Thành tiền bán"].sum().reset_index()
-st.line_chart(dt.set_index("Tháng"))
 
-st.subheader("🔁 Tần suất mua")
+fig1 = px.line(dt, x="Tháng", y="Thành tiền bán", markers=True)
+st.plotly_chart(fig1, use_container_width=True)
+
+# ================= TẦN SUẤT =================
+st.subheader("🔁 Tần suất mua hàng")
+
 freq = df_kh.groupby("Tháng").size().reset_index(name="Số đơn")
-st.bar_chart(freq.set_index("Tháng"))
 
-st.subheader("📍 Giao hàng")
-tinh = df_kh.groupby("Tỉnh")["Thành tiền bán"].sum().reset_index()
-st.bar_chart(tinh.set_index("Tỉnh"))
+fig2 = px.bar(freq, x="Tháng", y="Số đơn")
+st.plotly_chart(fig2, use_container_width=True)
+
+# ================= MÃ HÀNG =================
+st.subheader("📦 Mã hàng mua nhiều")
+
+sp = df_kh.groupby("Tên mã hàng").size().reset_index(name="Số lần")
+
+sp = sp.sort_values(by="Số lần", ascending=False).head(10)
+
+fig3 = px.bar(sp, x="Tên mã hàng", y="Số lần")
+st.plotly_chart(fig3, use_container_width=True)
+
+# ================= AI INSIGHT =================
+st.subheader("🧠 Insight tự động")
+
+if not dt.empty:
+    top_month = dt.loc[dt["Thành tiền bán"].idxmax()]
+    st.success(f"🔥 Tháng mua nhiều nhất: {top_month['Tháng']}")
+
+if not sp.empty:
+    top_sp = sp.iloc[0]
+    st.success(f"📦 Mã hàng mua nhiều nhất: {top_sp['Tên mã hàng']} ({top_sp['Số lần']} lần)")
+
+if not freq.empty:
+    top_freq = freq.loc[freq["Số đơn"].idxmax()]
+    st.info(f"🔁 Tháng mua nhiều đơn nhất: {top_freq['Tháng']} ({top_freq['Số đơn']} đơn)")
