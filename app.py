@@ -3,30 +3,54 @@ import pandas as pd
 import plotly.express as px
 import os
 
-st.set_page_config(page_title="KSKD PRO", layout="wide")
-st.title("📊 DASHBOARD PHÂN TÍCH KHÁCH HÀNG")
+st.set_page_config(page_title="KSKD Dashboard", layout="wide")
+st.title("📊 PHÂN TÍCH KHÁCH HÀNG")
+
+# ================== TẠO THƯ MỤC ==================
+DATA_FOLDER = "data"
+os.makedirs(DATA_FOLDER, exist_ok=True)
+
+# ================== UPLOAD ==================
+file = st.sidebar.file_uploader("📂 Upload Excel", type=["xlsx"])
+
+if file is not None:
+    file_path = os.path.join(DATA_FOLDER, file.name)
+
+    with open(file_path, "wb") as f:
+        f.write(file.getbuffer())
+
+    st.success(f"✅ Upload: {file.name}")
+
+    # 🔥 BẮT BUỘC để reload dữ liệu
+    st.cache_data.clear()
+    st.rerun()
+
 
 # ================== LOAD DATA ==================
 @st.cache_data
 def load_data():
-    if not os.path.exists("data"):
+    files = os.listdir(DATA_FOLDER)
+
+    if len(files) == 0:
         return pd.DataFrame()
 
-    files = os.listdir("data")
     df_list = []
 
     for f in files:
         try:
-            df_raw = pd.read_excel(f"data/{f}", engine="openpyxl")
+            path = os.path.join(DATA_FOLDER, f)
 
-            # ===== TỰ TÌM HEADER =====
+            # ===== AUTO HEADER =====
+            df_raw = pd.read_excel(path, engine="openpyxl")
+
             header_row = 0
             for i in range(0, 20):
                 if "khách" in str(df_raw.iloc[i]).lower():
                     header_row = i
                     break
 
-            df = pd.read_excel(f"data/{f}", header=header_row)
+            df = pd.read_excel(path, header=header_row, engine="openpyxl")
+
             df_list.append(df)
 
         except:
@@ -38,7 +62,7 @@ def load_data():
     df = pd.concat(df_list, ignore_index=True)
 
     # ===== FIX CỘT =====
-    df.columns = df.columns.astype(str).str.strip().str.replace("\n","")
+    df.columns = df.columns.astype(str).str.strip()
 
     # ===== RENAME =====
     df = df.rename(columns={
@@ -68,9 +92,9 @@ def load_data():
     df.loc[df["Nơi giao hàng"].str.contains("đồng nai", case=False, na=False), "Tỉnh"] = "Đồng Nai"
 
     # ===== XE =====
-    df["Biển số xe"] = df["Biển số xe"].astype(str).str.replace(" ","").str.upper()
-    df = df[~df["Biển số xe"].isin(["GK","NAN",""])]
-    df = df[df["Biển số xe"].str.len().between(7,9)]
+    df["Biển số xe"] = df["Biển số xe"].astype(str).str.replace(" ", "").str.upper()
+    df = df[~df["Biển số xe"].isin(["GK", "NAN", ""])]
+    df = df[df["Biển số xe"].str.len().between(7, 9)]
 
     # ===== LỢI NHUẬN =====
     df["Lợi nhuận"] = df["Thành tiền bán"] - df["Thành tiền vốn"]
@@ -78,20 +102,10 @@ def load_data():
     return df
 
 
-# ================== UPLOAD ==================
-if not os.path.exists("data"):
-    os.makedirs("data")
-
-file = st.sidebar.file_uploader("📂 Upload Excel", type=["xlsx"])
-
-if file:
-    with open(f"data/{file.name}", "wb") as f:
-        f.write(file.getbuffer())
-    st.cache_data.clear()
-    st.success("Upload thành công!")
-
 # ================== LOAD ==================
 df = load_data()
+
+st.write("📊 Dữ liệu:", df.shape)
 
 if df.empty:
     st.warning("👉 Upload file để bắt đầu")
@@ -101,11 +115,10 @@ if df.empty:
 kh_list = df["Tên khách hàng"].dropna().unique()
 
 if len(kh_list) == 0:
-    st.warning("Không có dữ liệu KH")
+    st.warning("Không có khách hàng")
     st.stop()
 
 kh = st.sidebar.selectbox("Chọn khách hàng", kh_list)
-
 df_kh = df[df["Tên khách hàng"] == kh]
 
 # ================== TABS ==================
@@ -119,25 +132,21 @@ tab1, tab2, tab3, tab4 = st.tabs([
 # ================== TAB 1 ==================
 with tab1:
     dt = df_kh.groupby("Tháng")["Thành tiền bán"].sum().reset_index()
-
     fig = px.line(dt, x="Tháng", y="Thành tiền bán", markers=True)
     st.plotly_chart(fig, use_container_width=True)
 
 # ================== TAB 2 ==================
 with tab2:
     freq = df_kh.groupby("Tháng").size().reset_index(name="Số đơn")
-
     fig = px.bar(freq, x="Tháng", y="Số đơn")
     st.plotly_chart(fig, use_container_width=True)
 
 # ================== TAB 3 ==================
 with tab3:
     tinh = df_kh.groupby("Tỉnh")["Thành tiền bán"].sum().reset_index()
-
     fig = px.bar(tinh, x="Tỉnh", y="Thành tiền bán")
     st.plotly_chart(fig, use_container_width=True)
 
-    # MAP
     map_data = pd.DataFrame({
         "Tỉnh": ["TP HCM","Hà Nội","Bình Dương","Đồng Nai"],
         "lat": [10.82,21.02,11.07,10.95],
@@ -149,11 +158,11 @@ with tab3:
 
 # ================== TAB 4 ==================
 with tab4:
-    st.subheader("🤖 Insight tự động")
+    st.subheader("🤖 Insight")
 
     if not dt.empty:
         top = dt.sort_values("Thành tiền bán", ascending=False).iloc[0]
-        st.write(f"🔥 Mua nhiều nhất tháng: {top['Tháng']}")
+        st.write(f"🔥 Mua nhiều nhất: {top['Tháng']}")
 
     st.write(f"📦 TB: {round(freq['Số đơn'].mean(),1)} đơn/tháng")
 
@@ -161,7 +170,7 @@ with tab4:
     st.write(f"📍 Giao nhiều nhất: {top_tinh['Tỉnh']}")
 
     if df_kh["Biển số xe"].nunique() > 5:
-        st.write("⚠️ Nhiều xe → rủi ro vận chuyển")
+        st.write("⚠️ Nhiều xe → rủi ro")
 
     if df_kh["Tỉnh"].nunique() > 3:
-        st.write("⚠️ Giao nhiều tỉnh → rủi ro phân tán")
+        st.write("⚠️ Giao nhiều tỉnh → phân tán")
