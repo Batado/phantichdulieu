@@ -23,7 +23,10 @@ def find_header_row(path_or_buffer):
     df_raw = pd.read_excel(path_or_buffer, header=None, engine="openpyxl", nrows=35)
     keywords = ["khách hàng", "khach hang", "tên kh", "số chứng từ", "so chung tu", "mã khách hàng"]
     for i in range(df_raw.shape[0]):
-        row_text = " ".join(df_raw.iloc[i].astype(str).tolist()).lower()
+        # FIX: fillna("") trước khi join để tránh lỗi "expected str, got float" khi có ô NaN
+        row_vals = [str(v) if not (isinstance(v, float) and pd.isna(v)) else "" 
+                    for v in df_raw.iloc[i].tolist()]
+        row_text = " ".join(row_vals).lower()
         if any(kw in row_text for kw in keywords):
             return i
     return 0  # fallback: dùng row đầu tiên
