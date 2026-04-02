@@ -3,165 +3,245 @@ import pandas as pd
 import plotly.express as px
 import os
 
-# Cấu hình trang
 st.set_page_config(page_title="Phân tích Kinh Doanh KH", layout="wide")
 st.title("📊 Dashboard Phân tích khách hàng")
 
 DATA_PATH = "data"
 os.makedirs(DATA_PATH, exist_ok=True)
 
-# Upload file và lưu vào thư mục DATA_PATH
 file = st.sidebar.file_uploader("📂 Upload Excel", type=["xlsx"])
 if file is not None:
     path = os.path.join(DATA_PATH, file.name)
-    if not os.path.exists(path):
-        with open(path, "wb") as f:
-            f.write(file.getbuffer())
+    with open(path, "wb") as f:
+        f.write(file.getbuffer())
     st.success(f"✅ Upload thành công: {file.name}")
-    # Clear cache và rerun để load file mới
     st.cache_data.clear()
     st.rerun()
 
-# Hàm tự động đọc file Excel (tìm sheet và header phù hợp)
+
 @st.cache_data
 def read_excel_smart(path):
+    """
+    Đọc file Excel, tự động tìm dòng header.
+    File báo cáo OM_RPT_055 có header ở row 13 (0-indexed).
+    Hỗ trợ cả file có header ở các vị trí khác.
+    """
     try:
         xl = pd.ExcelFile(path)
     except Exception:
         return pd.DataFrame()
+
     for sheet in xl.sheet_names:
         try:
             df_raw = pd.read_excel(path, sheet_name=sheet, header=None, engine="openpyxl")
         except Exception:
             continue
-        # Tìm dòng header có chứa từ "khách hàng" hoặc "số chứng từ"
-        for i in range(0, min(30, df_raw.shape[0])):
-            row_text = " ".join(df_raw.iloc[i].astype(str).tolist()).lower()
-            if "khách hàng" in row_text or "tên kh" in row_text or "số chứng từ" in row_text:
-                try:
-                    df = pd.read_excel(path, sheet_name=sheet, header=i, engine="openpyxl")
-                except Exception:
-                    continue
-                return df
+
+        # Tìm dòng header: so sánh không phân biệt hoa thường, bỏ dấu accent
+        header_row = None
+        for i in range(min(30, df_raw.shape[0])):
+            row_vals = df_raw.iloc[i].astype(str).tolist()
+            row_text = " ".join(row_vals).lower()
+            # Kiểm tra các từ khoá không dấu và có dấu
+            keywords = ["khach hang", "khách hàng", "ten kh", "tên kh",
+                        "so chung tu", "số chứng từ", "ma khach hang", "mã khách hàng"]
+            if any(kw in row_text for kw in keywords):
+                header_row = i
+                break
+
+        if header_row is None:
+            continue
+
+        try:
+            df = pd.read_excel(path, sheet_name=sheet, header=header_row, engine="openpyxl")
+            return df
+        except Exception:
+            continue
+
     return pd.DataFrame()
 
-# Hàm load toàn bộ data từ các file đã lưu
+
 @st.cache_data
 def load_data():
-    files = os.listdir(DATA_PATH)
+    files = [f for f in os.listdir(DATA_PATH) if f.endswith(".xlsx")]
     all_df = []
+
     for f in files:
         file_path = os.path.join(DATA_PATH, f)
         df = read_excel_smart(file_path)
         if not df.empty:
-            df["Nguồn file"] = f  # lưu tên file để tracking (nếu cần)
+            df["Nguồn file"] = f
             all_df.append(df)
+
     if not all_df:
         return pd.DataFrame()
+
     df = pd.concat(all_df, ignore_index=True)
-    # Làm sạch tên cột
     df.columns = df.columns.astype(str).str.strip()
+
+    # Chuẩn hoá tên cột — thêm "Số xe" → "Biển số xe" (tên thực tế trong file)
     df.rename(columns={
-        # Chuẩn hóa tên cột thường gặp
         "Tên KH": "Tên khách hàng",
         "Khách hàng": "Tên khách hàng",
         "Tên khách": "Tên khách hàng",
         "Ngày CT": "Ngày chứng từ",
-        "Nơi giao hàng": "Nơi giao hàng",
         "Địa chỉ giao hàng": "Nơi giao hàng",
-        "Tên hàng": "Tên mã hàng",
-        "Biển số xe": "Biển số xe"
+        "Tên hàng": "Tên mã hàng",        # file thực tế dùng "Tên hàng"
+        "Số xe": "Biển số xe",             # ← FIX: file dùng "Số xe", không phải "Biển số xe"
     }, inplace=True)
-    # Nếu thiếu cột bắt buộc, trả DF rỗng
-    if "Tên khách hàng" not in df.columns or "Ngày chứng từ" not in df.columns:
-        st.error("❌ Sai định dạng file: thiếu cột bắt buộc (Tên khách hoặc Ngày chứng từ).")
+
+    # Kiểm tra cột bắt buộc
+    required = ["Tên khách hàng", "Ngày chứng từ"]
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        st.error(f"❌ Thiếu cột bắt buộc: {missing}. Vui lòng kiểm tra file.")
         return pd.DataFrame()
-    # Chuyển kiểu cột
+
+    # Chuyển kiểu dữ liệu
     df["Ngày chứng từ"] = pd.to_datetime(df["Ngày chứng từ"], errors="coerce")
-    df["Thành tiền bán"] = pd.to_numeric(df.get("Thành tiền bán", 0), errors="coerce")
-    df["Thành tiền vốn"] = pd.to_numeric(df.get("Thành tiền vốn", 0), errors="coerce")
-    # Thêm cột Tháng (YYYY-MM)
+
+    # FIX: dùng `in df.columns` thay vì df.get() — pandas DataFrame không hỗ trợ .get()
+    if "Thành tiền bán" in df.columns:
+        df["Thành tiền bán"] = pd.to_numeric(df["Thành tiền bán"], errors="coerce").fillna(0)
+    else:
+        df["Thành tiền bán"] = 0
+
+    if "Thành tiền vốn" in df.columns:
+        df["Thành tiền vốn"] = pd.to_numeric(df["Thành tiền vốn"], errors="coerce").fillna(0)
+    else:
+        df["Thành tiền vốn"] = 0
+
     df["Tháng"] = df["Ngày chứng từ"].dt.strftime("%Y-%m")
-    # Gom nhóm tỉnh từ Nơi giao hàng
-    df["Nơi giao hàng"] = df.get("Nơi giao hàng", "").astype(str)
+
+    # Phân tỉnh từ Nơi giao hàng
+    if "Nơi giao hàng" not in df.columns:
+        df["Nơi giao hàng"] = ""
+    df["Nơi giao hàng"] = df["Nơi giao hàng"].astype(str)
     df["Tỉnh"] = "Khác"
-    df.loc[df["Nơi giao hàng"].str.contains("hcm", case=False, na=False), "Tỉnh"] = "TP HCM"
-    df.loc[df["Nơi giao hàng"].str.contains("hà nội", case=False, na=False), "Tỉnh"] = "Hà Nội"
-    df.loc[df["Nơi giao hàng"].str.contains("bình dương", case=False, na=False), "Tỉnh"] = "Bình Dương"
-    df.loc[df["Nơi giao hàng"].str.contains("đồng nai", case=False, na=False), "Tỉnh"] = "Đồng Nai"
-    # Số xe (biển số) lọc ký tự và độ dài hợp lệ
-    df["Biển số xe"] = df.get("Biển số xe", "").astype(str).str.replace(" ", "").str.replace("-", "").str.upper()
-    df = df[df["Biển số xe"].str.len().between(7, 9)]
-    df = df[~df["Biển số xe"].isin(["GK", "", "NONE", "nan"])]
+    province_map = {
+        "TP HCM":       ["hồ chí minh", "hcm", "tp hcm", "tphcm"],
+        "Hà Nội":       ["hà nội", "hanoi"],
+        "Bình Dương":   ["bình dương", "binh duong"],
+        "Đồng Nai":     ["đồng nai", "dong nai"],
+        "Long An":      ["long an"],
+        "Bà Rịa - VT":  ["bà rịa", "vũng tàu", "ba ria"],
+    }
+    col_lower = df["Nơi giao hàng"].str.lower()
+    for tinh, keywords in province_map.items():
+        mask = col_lower.str.contains("|".join(keywords), na=False)
+        df.loc[mask, "Tỉnh"] = tinh
+
+    # Xử lý biển số xe — FIX: bỏ filter độ dài cứng nhắc gây mất data
+    if "Biển số xe" in df.columns:
+        df["Biển số xe"] = (
+            df["Biển số xe"].astype(str)
+            .str.replace(" ", "", regex=False)
+            .str.replace("-", "", regex=False)
+            .str.upper()
+            .str.strip()
+        )
+        # Chỉ loại bỏ giá trị rõ ràng là rác, giữ lại biển số hợp lệ (6–10 ký tự)
+        invalid = {"NAN", "NONE", "", "GK", "N/A"}
+        df = df[~df["Biển số xe"].isin(invalid)]
+        df = df[df["Biển số xe"].str.len().between(6, 10)]
+    else:
+        df["Biển số xe"] = "N/A"
+
     return df
 
+
+# ─── Load data ───────────────────────────────────────────────
 df = load_data()
+
 if df.empty:
     st.warning("⚠️ Chưa có dữ liệu hợp lệ. Vui lòng upload file Excel.")
     st.stop()
 
-# Lọc theo khách hàng
-kh_list = df["Tên khách hàng"].dropna().unique()
+# ─── Sidebar: filter ─────────────────────────────────────────
+kh_list = sorted(df["Tên khách hàng"].dropna().unique())
 kh = st.sidebar.selectbox("👤 Chọn khách hàng", kh_list)
 df_kh = df[df["Tên khách hàng"] == kh]
 
-# KPI tổng quan
-c1, c2, c3 = st.columns(3)
-tong_doanhthu = df_kh["Thành tiền bán"].sum()
-c1.metric("💰 Doanh thu (VNĐ)", f"{tong_doanhthu:,.0f}")
-c2.metric("📦 Số đơn", len(df_kh))
-c3.metric("📁 Số file phân tích", df_kh["Nguồn file"].nunique())
+# ─── KPI ─────────────────────────────────────────────────────
+c1, c2, c3, c4 = st.columns(4)
+tong_dt = df_kh["Thành tiền bán"].sum()
+tong_von = df_kh["Thành tiền vốn"].sum()
+loi_nhuan = tong_dt - tong_von
+so_don = df_kh["Số chứng từ"].nunique() if "Số chứng từ" in df_kh.columns else len(df_kh)
 
-# Biểu đồ Doanh thu theo tháng
+c1.metric("💰 Doanh thu (VNĐ)", f"{tong_dt:,.0f}")
+c2.metric("📦 Số chứng từ", f"{so_don:,}")
+c3.metric("💹 Lợi nhuận (VNĐ)", f"{loi_nhuan:,.0f}")
+c4.metric("📁 Số file", df_kh["Nguồn file"].nunique())
+
+# ─── Biểu đồ doanh thu theo tháng ────────────────────────────
 st.subheader("📈 Doanh thu theo tháng")
 df_thang = df_kh.groupby("Tháng")["Thành tiền bán"].sum().reset_index()
 fig1 = px.line(df_thang, x="Tháng", y="Thành tiền bán", markers=True,
-               labels={"Tháng":"Tháng", "Thành tiền bán":"Doanh thu"})
-fig1.update_traces(textposition="top center")
+               labels={"Tháng": "Tháng", "Thành tiền bán": "Doanh thu (VNĐ)"})
 st.plotly_chart(fig1, use_container_width=True)
 
-# Biểu đồ Tần suất mua hàng theo tháng
-st.subheader("🔁 Tần suất mua hàng")
-df_freq = df_kh.groupby("Tháng").size().reset_index(name="Số đơn")
+# ─── Tần suất mua hàng ───────────────────────────────────────
+st.subheader("🔁 Tần suất đơn hàng theo tháng")
+freq_col = "Số chứng từ" if "Số chứng từ" in df_kh.columns else "Tháng"
+if "Số chứng từ" in df_kh.columns:
+    df_freq = df_kh.groupby("Tháng")["Số chứng từ"].nunique().reset_index(name="Số đơn")
+else:
+    df_freq = df_kh.groupby("Tháng").size().reset_index(name="Số đơn")
 fig2 = px.bar(df_freq, x="Tháng", y="Số đơn",
-              labels={"Tháng":"Tháng", "Số đơn":"Số đơn"})
-fig2.update_traces(textposition="outside")
+              labels={"Tháng": "Tháng", "Số đơn": "Số đơn hàng"})
 st.plotly_chart(fig2, use_container_width=True)
 
-# Biểu đồ Top 10 sản phẩm mua nhiều nhất
-st.subheader("📦 Top sản phẩm (số lần mua)")
-df_prod = df_kh.groupby("Tên mã hàng").size().reset_index(name="Số lần")
-df_prod = df_prod.sort_values(by="Số lần", ascending=False).head(10)
-fig3 = px.bar(df_prod, x="Tên mã hàng", y="Số lần",
-              labels={"Tên mã hàng":"Mã hàng", "Số lần":"Số lần mua"})
-fig3.update_traces(textposition="outside")
-fig3.update_layout(xaxis_tickangle=-30)
-st.plotly_chart(fig3, use_container_width=True)
+# ─── Top sản phẩm ────────────────────────────────────────────
+if "Tên mã hàng" in df_kh.columns:
+    st.subheader("📦 Top 10 sản phẩm mua nhiều nhất")
+    df_prod = (df_kh.groupby("Tên mã hàng")["Thành tiền bán"]
+               .sum().reset_index(name="Doanh thu")
+               .sort_values("Doanh thu", ascending=False).head(10))
+    fig3 = px.bar(df_prod, x="Tên mã hàng", y="Doanh thu",
+                  labels={"Tên mã hàng": "Sản phẩm", "Doanh thu": "Doanh thu (VNĐ)"})
+    fig3.update_layout(xaxis_tickangle=-30)
+    st.plotly_chart(fig3, use_container_width=True)
+else:
+    df_prod = pd.DataFrame()
 
-# Biểu đồ khu vực giao hàng
+# ─── Doanh thu theo tỉnh ─────────────────────────────────────
 st.subheader("📍 Doanh thu theo tỉnh giao hàng")
 df_province = df_kh.groupby("Tỉnh")["Thành tiền bán"].sum().reset_index()
 fig4 = px.pie(df_province, names="Tỉnh", values="Thành tiền bán",
               title="Tỷ trọng doanh thu theo tỉnh")
 st.plotly_chart(fig4, use_container_width=True)
 
-# Bản đồ đơn giản (các tỉnh chính)
+# ─── Bản đồ ──────────────────────────────────────────────────
 map_data = pd.DataFrame({
-    "Tỉnh": ["TP HCM","Hà Nội","Bình Dương","Đồng Nai"],
-    "latitude": [10.82, 21.02, 11.06, 10.95],
-    "longitude": [106.63, 105.85, 106.67, 106.83]
+    "Tỉnh":      ["TP HCM", "Hà Nội", "Bình Dương", "Đồng Nai", "Long An", "Bà Rịa - VT"],
+    "latitude":  [10.82,    21.02,     11.06,         10.95,      10.54,      10.58],
+    "longitude": [106.63,   105.85,    106.67,        106.83,     106.41,     107.17],
 })
 map_merge = pd.merge(map_data, df_province, on="Tỉnh", how="left").fillna(0)
-st.map(map_merge)
+st.map(map_merge[map_merge["Thành tiền bán"] > 0])
 
-# Insight tự động
+# ─── Khu vực bán hàng ────────────────────────────────────────
+if "Khu vực" in df_kh.columns:
+    st.subheader("🗺️ Doanh thu theo Khu vực")
+    df_kv = df_kh.groupby("Khu vực")["Thành tiền bán"].sum().reset_index()
+    fig5 = px.bar(df_kv, x="Khu vực", y="Thành tiền bán",
+                  labels={"Khu vực": "Khu vực", "Thành tiền bán": "Doanh thu (VNĐ)"})
+    st.plotly_chart(fig5, use_container_width=True)
+
+# ─── Insight tự động ─────────────────────────────────────────
 st.subheader("🧠 Insight tự động")
 if not df_thang.empty:
     top_thang = df_thang.loc[df_thang["Thành tiền bán"].idxmax()]
-    st.success(f"🔥 Khách mua nhiều nhất vào tháng: {top_thang['Tháng']} (Doanh thu {int(top_thang['Thành tiền bán']):,d} VNĐ)")
+    st.success(f"🔥 Tháng doanh thu cao nhất: {top_thang['Tháng']} "
+               f"({int(top_thang['Thành tiền bán']):,} VNĐ)")
 if not df_prod.empty:
     top_prod = df_prod.iloc[0]
-    st.success(f"📦 Sản phẩm mua nhiều nhất: {top_prod['Tên mã hàng']} ({top_prod['Số lần']} lần)")
+    st.success(f"📦 Sản phẩm doanh thu cao nhất: {top_prod['Tên mã hàng']} "
+               f"({int(top_prod['Doanh thu']):,} VNĐ)")
 if not df_freq.empty:
-    top_month_orders = df_freq.loc[df_freq["Số đơn"].idxmax()]
-    st.info(f"🔁 Tháng có nhiều đơn nhất: {top_month_orders['Tháng']} ({top_month_orders['Số đơn']} đơn)")
+    top_freq = df_freq.loc[df_freq["Số đơn"].idxmax()]
+    st.info(f"🔁 Tháng nhiều đơn nhất: {top_freq['Tháng']} ({top_freq['Số đơn']} đơn)")
+if loi_nhuan > 0:
+    margin = loi_nhuan / tong_dt * 100 if tong_dt else 0
+    st.info(f"💹 Biên lợi nhuận: {margin:.1f}%")
