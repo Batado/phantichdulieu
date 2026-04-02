@@ -2,176 +2,170 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import re
+import os
 
-st.set_page_config(page_title="KSKD Dashboard Pro", layout="wide")
+st.set_page_config(page_title="KSKD PRO MAX", layout="wide")
 
-# ===== STYLE =====
-st.markdown("""
-<style>
-body {background-color: #f5f6fa;}
-.block-container {padding-top: 1rem;}
-</style>
-""", unsafe_allow_html=True)
+st.sidebar.title("📊 Dashboard KSKD PRO")
 
-st.sidebar.title("📊 Dashboard KSKD")
+# ===== LƯU FILE =====
+if not os.path.exists("data"):
+    os.makedirs("data")
+
 file = st.sidebar.file_uploader("📂 Upload Excel", type=["xlsx"])
 
-# ===== HÀM GỘP ĐỊA CHỈ =====
-def clean_address(addr):
-    if pd.isna(addr):
-        return ""
-    addr = addr.lower()
-    addr = re.sub(r"tphcm|tp hcm|hồ chí minh", "hcm", addr)
-    addr = re.sub(r"hà nội|hn", "hanoi", addr)
-    addr = re.sub(r"[^a-z0-9 ]", "", addr)
-    return addr.strip()
-
 if file:
-    # ===== LOAD =====
-    try:
-        df = pd.read_excel(file, header=13)
-    except:
-        df = pd.read_excel(file)
+    filepath = f"data/{file.name}"
+    with open(filepath, "wb") as f:
+        f.write(file.getbuffer())
 
+# ===== LOAD HISTORY =====
+all_files = os.listdir("data")
+
+df_list = []
+for f in all_files:
+    try:
+        df_temp = pd.read_excel(f"data/{f}", header=13)
+        df_list.append(df_temp)
+    except:
+        pass
+
+if len(df_list) > 0:
+    df = pd.concat(df_list, ignore_index=True)
     df = df.dropna(how='all')
     df.columns = df.columns.str.strip()
 
     # ===== XỬ LÝ =====
     df["Ngày chứng từ"] = pd.to_datetime(df["Ngày chứng từ"], errors="coerce")
     df["Tháng"] = df["Ngày chứng từ"].dt.to_period("M").astype(str)
-    df["Quý"] = df["Ngày chứng từ"].dt.to_period("Q").astype(str)
 
-    df["Địa chỉ chuẩn"] = df["Nơi giao hàng"].apply(clean_address)
+    # ===== TÁCH TỈNH =====
+    def extract_province(addr):
+        if pd.isna(addr):
+            return "Không xác định"
+        addr = str(addr).lower()
 
+        if "hcm" in addr:
+            return "TP HCM"
+        if "hà nội" in addr:
+            return "Hà Nội"
+        if "bình dương" in addr:
+            return "Bình Dương"
+        if "đồng nai" in addr:
+            return "Đồng Nai"
+
+        return "Khác"
+
+    df["Tỉnh"] = df["Nơi giao hàng"].apply(extract_province)
+
+    # ===== BIỂN SỐ XE =====
+    def clean_vehicle(x):
+        if pd.isna(x):
+            return None
+        x = str(x).replace(" ", "").upper()
+        if x in ["GK", ""]:
+            return None
+        if 7 <= len(x) <= 9:
+            return x
+        return None
+
+    df["Xe"] = df["Biển số xe"].apply(clean_vehicle)
+
+    # ===== LỢI NHUẬN =====
     if "Thành tiền vốn" in df.columns:
         df["Lợi nhuận"] = df["Thành tiền bán"] - df["Thành tiền vốn"]
     else:
         df["Lợi nhuận"] = 0
 
-    # ===== FILTER =====
-    kh = st.sidebar.selectbox("Chọn khách hàng", df["Tên khách hàng"].dropna().unique())
+    # ===== CHỌN KH =====
+    kh = st.sidebar.selectbox("Khách hàng", df["Tên khách hàng"].dropna().unique())
     df_kh = df[df["Tên khách hàng"] == kh]
 
     # ===== TABS =====
-    tab1, tab2, tab3 = st.tabs([
+    tab1, tab2, tab3, tab4 = st.tabs([
         "📊 Tổng quan",
-        "🧠 Thói quen mua",
-        "🚚 Giao hàng"
+        "🧠 Thói quen",
+        "🗺️ Giao hàng",
+        "🤖 Insight AI"
     ])
 
-    # =========================
-    # TAB 1: TỔNG QUAN
-    # =========================
+    # ================= TAB 1 =================
     with tab1:
-        st.subheader("📊 Tổng quan")
+        st.subheader("📊 Doanh thu theo tháng")
 
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("💰 Doanh thu", f"{df_kh['Thành tiền bán'].sum():,.0f}")
-        c2.metric("📦 Số đơn", len(df_kh))
-        c3.metric("📍 Điểm giao", df_kh["Địa chỉ chuẩn"].nunique())
-        c4.metric("📈 Lợi nhuận", f"{df_kh['Lợi nhuận'].sum():,.0f}")
+        dt = df_kh.groupby("Tháng")["Thành tiền bán"].sum().reset_index()
 
-        # Doanh thu theo quý
-        q = df_kh.groupby("Quý")["Thành tiền bán"].sum().reset_index()
+        fig = px.line(dt, x="Tháng", y="Thành tiền bán", markers=True,
+                      text="Thành tiền bán")
 
-        fig_q = px.bar(q, x="Quý", y="Thành tiền bán",
-                       text="Thành tiền bán",
-                       title="Doanh thu theo quý")
+        fig.update_traces(textposition="top center")
+        st.plotly_chart(fig, use_container_width=True)
 
-        fig_q.update_traces(textposition="outside")
-        st.plotly_chart(fig_q, use_container_width=True)
-
-    # =========================
-    # TAB 2: THÓI QUEN MUA
-    # =========================
+    # ================= TAB 2 =================
     with tab2:
-        st.subheader("📅 Tần suất mua theo tháng")
+        st.subheader("📦 Tần suất mua hàng")
 
         freq = df_kh.groupby("Tháng").size().reset_index(name="Số đơn")
 
-        fig1 = px.bar(freq, x="Tháng", y="Số đơn",
-                      text="Số đơn",
-                      title="Số lần mua theo tháng")
+        fig = px.bar(freq, x="Tháng", y="Số đơn", text="Số đơn")
+        fig.update_traces(textposition="outside")
 
-        fig1.update_traces(textposition="outside")
-        st.plotly_chart(fig1, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True)
 
-        # ===== TẦN SUẤT MÃ HÀNG =====
-        st.subheader("📦 Tần suất mua theo mã hàng")
-
-        freq_product = df_kh.groupby("Tên hàng").size().reset_index(name="Số lần")
-        freq_product = freq_product.sort_values(by="Số lần", ascending=False)
-
-        fig2 = px.bar(
-            freq_product.head(10),
-            x="Tên hàng",
-            y="Số lần",
-            text="Số lần",
-            title="Top mã hàng theo số lần mua"
-        )
-
-        fig2.update_traces(textposition="outside")
-        fig2.update_layout(xaxis_tickangle=-30)
-
-        st.plotly_chart(fig2, use_container_width=True)
-
-        # ===== HEATMAP =====
-        st.subheader("🔥 Heatmap thói quen mua")
-
-        heat = df_kh.groupby(["Tháng","Tên hàng"]).size().reset_index(name="Số lần")
-
-        fig_heat = px.density_heatmap(
-            heat,
-            x="Tháng",
-            y="Tên hàng",
-            z="Số lần",
-            color_continuous_scale="Blues"
-        )
-
-        st.plotly_chart(fig_heat, use_container_width=True)
-
-    # =========================
-    # TAB 3: GIAO HÀNG
-    # =========================
+    # ================= TAB 3 =================
     with tab3:
-        st.subheader("📍 Phân bố nơi giao hàng")
+        st.subheader("🗺️ Phân tích theo tỉnh")
 
-        dia = df_kh.groupby("Địa chỉ chuẩn").size().reset_index(name="Số lần")
-        dia = dia.sort_values(by="Số lần", ascending=False)
+        tinh = df_kh.groupby("Tỉnh")["Thành tiền bán"].sum().reset_index()
 
-        # Top 5 + Others
-        top = dia.head(5)
-        others = pd.DataFrame({
-            "Địa chỉ chuẩn": ["Others"],
-            "Số lần": [dia["Số lần"][5:].sum()]
+        fig = px.bar(tinh, x="Tỉnh", y="Thành tiền bán",
+                     text="Thành tiền bán",
+                     title="Doanh thu theo tỉnh")
+
+        fig.update_traces(textposition="outside")
+        st.plotly_chart(fig, use_container_width=True)
+
+        # ===== MAP =====
+        st.subheader("🌍 Bản đồ giao hàng")
+
+        map_data = pd.DataFrame({
+            "Tỉnh": ["TP HCM","Hà Nội","Bình Dương","Đồng Nai"],
+            "lat": [10.82,21.02,11.07,10.95],
+            "lon": [106.63,105.85,106.67,106.82]
         })
 
-        dia_plot = pd.concat([top, others]) if len(dia) > 5 else dia
+        map_merge = pd.merge(map_data, tinh, on="Tỉnh", how="left").fillna(0)
 
-        dia_plot["%"] = dia_plot["Số lần"] / dia_plot["Số lần"].sum()
+        st.map(map_merge.rename(columns={"lat":"latitude","lon":"longitude"}))
 
-        fig3 = px.bar(
-            dia_plot,
-            x="Địa chỉ chuẩn",
-            y="Số lần",
-            text=dia_plot["Số lần"].astype(str) + " (" + (dia_plot["%"]*100).round(1).astype(str) + "%)",
-            title="Top khu vực giao hàng"
-        )
+    # ================= TAB 4 =================
+    with tab4:
+        st.subheader("🤖 Insight tự động")
 
-        fig3.update_traces(textposition="outside")
-        fig3.update_layout(xaxis_tickangle=-30)
+        insights = []
 
-        st.plotly_chart(fig3, use_container_width=True)
+        # THÁNG MUA NHIỀU NHẤT
+        if not dt.empty:
+            top_month = dt.sort_values(by="Thành tiền bán", ascending=False).iloc[0]
+            insights.append(f"📈 Mua nhiều nhất vào {top_month['Tháng']} ({top_month['Thành tiền bán']:,.0f})")
 
-        # ===== VẬN CHUYỂN =====
-        if "Phương thức vận chuyển" in df.columns:
-            st.subheader("🚚 Hình thức vận chuyển")
+        # TẦN SUẤT
+        avg_freq = freq["Số đơn"].mean()
+        insights.append(f"🔁 Trung bình {avg_freq:.1f} đơn/tháng")
 
-            vc = df_kh["Phương thức vận chuyển"].value_counts().reset_index()
-            vc.columns = ["Hình thức", "Số lần"]
+        # TỈNH CHÍNH
+        top_tinh = tinh.sort_values(by="Thành tiền bán", ascending=False).iloc[0]
+        insights.append(f"📍 Tập trung giao tại {top_tinh['Tỉnh']}")
 
-            fig4 = px.pie(vc, names="Hình thức", values="Số lần")
-            st.plotly_chart(fig4, use_container_width=True)
+        # RỦI RO
+        if df_kh["Xe"].nunique() > 5:
+            insights.append("⚠️ Dùng nhiều xe → rủi ro vận chuyển")
+
+        if df_kh["Tỉnh"].nunique() > 3:
+            insights.append("⚠️ Giao nhiều tỉnh → phân tán")
+
+        for i in insights:
+            st.write("👉", i)
 
 else:
-    st.info("👈 Upload file bên trái để bắt đầu")
+    st.info("👈 Upload file để bắt đầu")
