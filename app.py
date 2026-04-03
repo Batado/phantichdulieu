@@ -13,75 +13,103 @@ st.markdown("""
 .risk-high   {background:#4a1010;border-left:4px solid #e74c3c;padding:10px 14px;border-radius:6px;margin:5px 0;color:#fff;}
 .risk-medium {background:#3d2e10;border-left:4px solid #f39c12;padding:10px 14px;border-radius:6px;margin:5px 0;color:#fff;}
 .risk-low    {background:#0f3020;border-left:4px solid #26c281;padding:10px 14px;border-radius:6px;margin:5px 0;color:#fff;}
-.info-box    {background:#1a2035;border-radius:8px;padding:14px;margin:8px 0;color:#ccc;font-size:14px;}
+.risk-info   {background:#0d1f35;border-left:4px solid #4e79d4;padding:10px 14px;border-radius:6px;margin:5px 0;color:#fff;}
 .section-title{font-size:16px;font-weight:700;color:#e0e0e0;margin:18px 0 8px 0;
                padding-bottom:5px;border-bottom:1px solid #2e3350;}
-.badge-pkd   {background:#1e3a5f;color:#7ec8f7;padding:3px 10px;border-radius:12px;
-               font-size:12px;font-weight:600;margin-right:4px;}
+.kpi-card    {background:#1a2035;border-radius:8px;padding:14px 16px;text-align:center;}
+.kpi-val     {font-size:22px;font-weight:800;color:#fff;}
+.kpi-lab     {font-size:11px;color:#9aa0b0;margin-top:4px;}
 </style>
 """, unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════
-#  CONSTANTS
-# ══════════════════════════════════════════════════════════════
 COL_ALIASES = {
-    "Tên khách hàng":     ["Tên khách hàng","Tên KH","Khách hàng","Tên khách"],
-    "Mã khách hàng":      ["Mã khách hàng","Mã KH","customer_code"],
-    "Mã nhóm KH":         ["Mã nhóm KH","Nhóm KH","dept_code"],
-    "Tên nhóm KH":        ["Tên nhóm KH","Phòng KD","dept_name"],
-    "Ngày chứng từ":      ["Ngày chứng từ","Ngày CT","date"],
-    "Số chứng từ":        ["Số chứng từ","Số CT","voucher_no"],
-    "Số ĐH":              ["Số ĐH","Order No","order_no"],
-    "Tên hàng":           ["Tên hàng","Tên mã hàng","Tên SP"],
-    "Mã hàng":            ["Mã hàng","Mã SP"],
-    "Mã nhóm hàng":       ["Mã nhóm hàng","Nhóm hàng"],
-    "Khối lượng":         ["Khối lượng","KL","weight"],
-    "Số lượng":           ["Số lượng","SL","qty"],
-    "Thành tiền bán":     ["Thành tiền bán","Doanh thu","revenue"],
-    "Thành tiền vốn":     ["Thành tiền vốn","Giá vốn hàng bán","cost_total"],
-    "Lợi nhuận":          ["Lợi nhuận","Profit"],
-    "Giá bán":            ["Giá bán","Đơn giá","unit_price"],
-    "Giá vốn":            ["Giá vốn","cost_price"],
-    "Đơn giá vận chuyển": ["Đơn giá vận chuyển","Chi phí VC"],
-    "Đơn giá quy đổi":    ["Đơn giá quy đổi","converted_price"],
-    "Nơi giao hàng":      ["Nơi giao hàng","Địa chỉ giao hàng"],
-    "Freight Terms":      ["Freight Terms","Điều kiện giao hàng"],
-    "Shipping method":    ["Shipping method","Phương tiện"],
-    "Biển số xe":         ["Số xe","Biển số xe","Biển xe"],
-    "Tài Xế":             ["Tài Xế","Tài xế","Driver"],
-    "Tên ĐVVC":           ["Tên ĐVVC","Đơn vị vận chuyển"],
-    "Ghi chú":            ["Ghi chú","Note","Ghi Chú"],
-    "Khu vực":            ["Khu vực","Region"],
-    "Loại đơn hàng":      ["Loại đơn hàng","Order Type"],
+    "Ten khach hang":     ["Tên KH","Khách hàng","Tên khách","customer_name"],
+    "Ma khach hang":      ["Mã KH","customer_code"],
+    "Ngay chung tu":      ["Ngày CT","Ngày","date"],
+    "So chung tu":        ["Số CT","voucher_no"],
+    "Ma nhom KH":         ["Nhóm KH","sales_group"],
+    "Ten nhom KH":        ["Tên nhóm","sales_group_name"],
+    "Ten hang":           ["Tên mã hàng","Tên SP","product_name"],
+    "Ma hang":            ["Mã SP","product_code"],
+    "Ma nhom hang":       ["Nhóm hàng","product_group"],
+    "Khoi luong":         ["KL","weight"],
+    "So luong":           ["SL","qty"],
+    "Thanh tien ban":     ["Doanh thu","revenue","amount"],
+    "Thanh tien von":     ["Vốn","cost_total"],
+    "Loi nhuan":          ["Profit","profit"],
+    "Gia ban":            ["Đơn giá","unit_price"],
+    "Gia von":            ["cost_price"],
+    "Don gia quy doi":    ["converted_price"],
+    "Don gia van chuyen": ["freight_unit"],
+    "Noi giao hang":      ["Địa chỉ giao hàng","delivery_address"],
+    "Freight Terms":      ["Điều kiện giao hàng","freight"],
+    "Shipping method":    ["Phương tiện","shipping"],
+    "Bien so xe":         ["Số xe","plate_no"],
+    "Tai xe":             ["Tài xế","Driver"],
+    "Ten DVVC":           ["Đơn vị vận chuyển","carrier"],
+    "Ghi chu":            ["Note","notes"],
+    "Khu vuc":            ["Region"],
+    "Ma kho":             ["warehouse"],
+    "Loai don hang":      ["order_type"],
 }
 
-NUM_COLS = ["Thành tiền bán","Thành tiền vốn","Lợi nhuận",
-            "Khối lượng","Số lượng","Giá bán","Giá vốn",
-            "Đơn giá vận chuyển","Đơn giá quy đổi"]
+# Map từ alias → tên chuẩn trong file (tiếng Việt)
+STANDARD_NAMES = {
+    "Ten khach hang":     "Tên khách hàng",
+    "Ma khach hang":      "Mã khách hàng",
+    "Ngay chung tu":      "Ngày chứng từ",
+    "So chung tu":        "Số chứng từ",
+    "Ma nhom KH":         "Mã nhóm KH",
+    "Ten nhom KH":        "Tên nhóm KH",
+    "Ten hang":           "Tên hàng",
+    "Ma hang":            "Mã hàng",
+    "Ma nhom hang":       "Mã nhóm hàng",
+    "Khoi luong":         "Khối lượng",
+    "So luong":           "Số lượng",
+    "Thanh tien ban":     "Thành tiền bán",
+    "Thanh tien von":     "Thành tiền vốn",
+    "Loi nhuan":          "Lợi nhuận",
+    "Gia ban":            "Giá bán",
+    "Gia von":            "Giá vốn",
+    "Don gia quy doi":    "Đơn giá quy đổi",
+    "Don gia van chuyen": "Đơn giá vận chuyển",
+    "Noi giao hang":      "Nơi giao hàng",
+    "Freight Terms":      "Freight Terms",
+    "Shipping method":    "Shipping method",
+    "Bien so xe":         "Biển số xe",
+    "Tai xe":             "Tài Xế",
+    "Ten DVVC":           "Tên ĐVVC",
+    "Ghi chu":            "Ghi chú",
+    "Khu vuc":            "Khu vực",
+    "Ma kho":             "Mã kho",
+    "Loai don hang":      "Loại đơn hàng",
+}
 
-SP_MAPPING = [
+NHOM_SP = [
     ("Ống HDPE",        r"HDPE"),
     ("Ống PVC nước",    r"PVC.*(?:nước|nong dài|nong trơn|thoát)"),
     ("Ống PVC bơm cát", r"PVC.*(?:cát|bơm cát)"),
     ("Ống PPR",         r"PPR"),
     ("Lõi PVC",         r"(?:Lơi|Lõi|lori)"),
-    ("Phụ kiện & Keo",  r"(?:Nối|Co |Tê |Van |Keo |Măng|Bít)"),
+    ("Phụ kiện & Keo",  r"(?:Nối|Co |Tê |Van |Keo |Măng|Bít|Y PVC|Y PPR)"),
 ]
 
-# ══════════════════════════════════════════════════════════════
-#  HELPERS
-# ══════════════════════════════════════════════════════════════
 def normalize_columns(df):
-    cols_lower = {c.strip().lower(): c for c in df.columns}
+    """Map alias → tên chuẩn tiếng Việt. Không đổi nếu cột đã đúng."""
+    cols_lower = {str(c).strip().lower(): c for c in df.columns}
     rename = {}
-    for std, aliases in COL_ALIASES.items():
+    for key, aliases in COL_ALIASES.items():
+        std = STANDARD_NAMES[key]
         if std in df.columns:
             continue
         for a in aliases:
             if a in df.columns:
-                rename[a] = std; break
+                rename[a] = std
+                break
             if a.strip().lower() in cols_lower:
-                rename[cols_lower[a.strip().lower()]] = std; break
+                rename[cols_lower[a.strip().lower()]] = std
+                break
     df.rename(columns=rename, inplace=True)
     return df
 
@@ -90,84 +118,24 @@ def find_header_row(fb):
         raw = pd.read_excel(io.BytesIO(fb), header=None, engine="openpyxl", nrows=40)
     except Exception:
         return 0
-    kws = ["khách hàng","tên kh","số chứng từ","ngày chứng từ","tên hàng","mã khách"]
+    kws = ["khách hàng","khach hang","tên kh","số chứng từ","mã khách","ngày chứng từ","tên hàng"]
     for i in range(raw.shape[0]):
-        vals = ["" if (isinstance(v,float) and pd.isna(v)) else str(v) for v in raw.iloc[i]]
+        vals = ["" if (isinstance(v, float) and pd.isna(v)) else str(v) for v in raw.iloc[i].tolist()]
         txt  = " ".join(vals).lower()
         if sum(1 for k in kws if k in txt) >= 2:
             return i
     return 0
 
-def col(df, name, default=0):
-    if name in df.columns:
-        return pd.to_numeric(df[name], errors="coerce").fillna(default)
-    return pd.Series([default]*len(df), index=df.index)
+def get_col(df, col, default=0):
+    if col in df.columns:
+        return pd.to_numeric(df[col], errors="coerce").fillna(0)
+    return pd.Series(default, index=df.index)
 
-def fmt(n): return f"{n:,.0f}"
-
-# ══════════════════════════════════════════════════════════════
-#  LOAD
-# ══════════════════════════════════════════════════════════════
-@st.cache_data(show_spinner="Đang xử lý dữ liệu…")
-def load_all(file_data):
-    frames = []
-    for name, fb in file_data:
-        try:
-            hr = find_header_row(fb)
-            df = pd.read_excel(io.BytesIO(fb), header=hr, engine="openpyxl")
-            df.columns = [str(c).strip().replace("\n"," ") for c in df.columns]
-            df = df.loc[:, ~df.columns.str.startswith("Unnamed")]
-            df.dropna(how="all", inplace=True)
-            normalize_columns(df)
-            df["Nguồn file"] = name
-            frames.append(df)
-        except Exception as e:
-            st.warning(f"⚠️ Lỗi đọc `{name}`: {e}")
-    if not frames:
-        return pd.DataFrame()
-
-    df = pd.concat(frames, ignore_index=True)
-
-    for req in ["Ngày chứng từ","Tên khách hàng"]:
-        if req not in df.columns:
-            st.error(f"❌ Không tìm thấy cột '{req}'. Kiểm tra lại file.")
-            return pd.DataFrame()
-
-    df["Ngày chứng từ"] = pd.to_datetime(df["Ngày chứng từ"], dayfirst=True, errors="coerce")
-    df = df[df["Ngày chứng từ"].notna()].copy()
-
-    # Thời gian
-    df["Năm"]  = df["Ngày chứng từ"].dt.year.astype(str)
-    df["Quý"]  = df["Ngày chứng từ"].dt.to_period("Q").astype(str)
-    df["Tháng"]= df["Ngày chứng từ"].dt.to_period("M").astype(str)
-    df["Tuần"] = df["Ngày chứng từ"].dt.isocalendar().week.astype(str)
-    df["Ngày"] = df["Ngày chứng từ"].dt.date
-
-    # Số
-    for c in NUM_COLS:
-        df[c] = col(df, c)
-
-    # Loại GD
-    gc = df["Ghi chú"].astype(str).str.upper() if "Ghi chú" in df.columns else pd.Series([""]*len(df))
-    df["Loại GD"] = "Xuất bán"
-    df.loc[gc.str.contains(r"NHẬP TRẢ|TRẢ HÀNG", regex=True, na=False), "Loại GD"] = "Trả hàng"
-    df.loc[gc.str.contains(r"BỔ SUNG|THAY THẾ", regex=True, na=False), "Loại GD"]  = "Xuất bổ sung"
-
-    # Nhóm SP
-    ten = df["Tên hàng"].astype(str) if "Tên hàng" in df.columns else pd.Series([""]*len(df))
-    df["Nhóm SP"] = "Khác"
-    for label, pat in SP_MAPPING:
-        df.loc[ten.str.contains(pat, case=False, regex=True, na=False), "Nhóm SP"] = label
-
-    # PKD display
-    if "Mã nhóm KH" in df.columns and "Tên nhóm KH" in df.columns:
-        df["PKD"] = df["Mã nhóm KH"].astype(str) + " – " + df["Tên nhóm KH"].astype(str)
-    elif "Mã nhóm KH" in df.columns:
-        df["PKD"] = df["Mã nhóm KH"].astype(str)
-    else:
-        df["PKD"] = "Không xác định"
-
-    return df
+def fmt(v):
+    try:
+        return f"{float(v):,.0f}"
+    except Exception:
+        return str(v)
 
 # ══════════════════════════════════════════════════════════════
 #  UPLOAD
@@ -176,14 +144,83 @@ st.sidebar.markdown("## 📂 Upload dữ liệu")
 uploaded = st.sidebar.file_uploader("File Excel báo cáo bán hàng",
                                      type=["xlsx"], accept_multiple_files=True)
 if not uploaded:
-    st.title("📊 Phân tích Kinh Doanh – Hoa Sen")
-    st.info("👈 Upload file Excel báo cáo bán hàng để bắt đầu.")
+    st.markdown("## 👈 Upload file Excel để bắt đầu")
+    st.info("Hỗ trợ báo cáo OM_RPT_055 – header tự động nhận diện.")
     st.stop()
+
+@st.cache_data(show_spinner="Đang xử lý dữ liệu…")
+def load_all(file_data):
+    frames, errs = [], []
+    for name, fb in file_data:
+        try:
+            hr = find_header_row(fb)
+            df = pd.read_excel(io.BytesIO(fb), header=hr, engine="openpyxl")
+            df.columns = [str(c).strip().replace("\n"," ").replace("\r","") for c in df.columns]
+            df = df.loc[:, ~df.columns.str.startswith("Unnamed")]
+            df.dropna(how="all", inplace=True)
+            normalize_columns(df)
+            df["Nguon file"] = name
+            frames.append(df)
+        except Exception as e:
+            errs.append(f"`{name}`: {e}")
+    for e in errs:
+        st.warning(f"⚠️ {e}")
+    if not frames:
+        return pd.DataFrame()
+
+    df = pd.concat(frames, ignore_index=True)
+
+    # Kiểm tra cột bắt buộc
+    for col in ["Ngày chứng từ", "Tên khách hàng"]:
+        if col not in df.columns:
+            st.error(f"❌ Không tìm thấy cột '{col}'. Kiểm tra file.")
+            return pd.DataFrame()
+
+    # Số hoá
+    num_cols = ["Thành tiền bán","Thành tiền vốn","Lợi nhuận",
+                "Khối lượng","Số lượng","Giá bán","Giá vốn",
+                "Đơn giá vận chuyển","Đơn giá quy đổi"]
+    for c in num_cols:
+        df[c] = get_col(df, c)
+
+    # Ngày
+    df["Ngày chứng từ"] = pd.to_datetime(df["Ngày chứng từ"], dayfirst=True, errors="coerce")
+    df = df[df["Ngày chứng từ"].notna()].copy()
+    df["Nam"]   = df["Ngày chứng từ"].dt.year.astype(str)
+    df["Quy"]   = df["Ngày chứng từ"].dt.to_period("Q").astype(str)
+    df["Thang"] = df["Ngày chứng từ"].dt.to_period("M").astype(str)
+    df["Ngay_trong_thang"] = df["Ngày chứng từ"].dt.day
+    df["Cuoi_thang"] = df["Ngay_trong_thang"] >= 28
+
+    # Loại GD
+    gc = df["Ghi chú"].astype(str).str.upper() if "Ghi chú" in df.columns else pd.Series("", index=df.index)
+    loai = df["Loại đơn hàng"].astype(str).str.upper() if "Loại đơn hàng" in df.columns else pd.Series("", index=df.index)
+    df["Loai_GD"] = "Xuất bán"
+    df.loc[gc.str.contains(r"NHẬP TRẢ|TRẢ HÀNG", regex=True, na=False), "Loai_GD"] = "Trả hàng"
+    df.loc[loai.str.contains(r"TRA HANG|HUY HD", regex=True, na=False), "Loai_GD"] = "Trả hàng"
+    df.loc[gc.str.contains(r"BỔ SUNG|THAY THẾ", regex=True, na=False), "Loai_GD"] = "Xuất bổ sung"
+
+    # Nhóm SP
+    ten = df["Tên hàng"].astype(str) if "Tên hàng" in df.columns else pd.Series("", index=df.index)
+    df["Nhom_SP"] = "Khác"
+    for label, pat in NHOM_SP:
+        df.loc[ten.str.contains(pat, case=False, regex=True, na=False), "Nhom_SP"] = label
+
+    # Biên LN
+    df["Bien_LN"] = np.where(df["Thành tiền bán"] != 0,
+                              df["Lợi nhuận"] / df["Thành tiền bán"] * 100, 0)
+
+    # Mã kho text
+    if "Mã kho" in df.columns:
+        df["Mã kho"] = df["Mã kho"].astype(str).str.replace(".0","",regex=False).str.strip()
+
+    return df
 
 file_data = [(u.name, u.read()) for u in uploaded]
 df_all = load_all(file_data)
 if df_all.empty:
-    st.error("Không có dữ liệu hợp lệ."); st.stop()
+    st.error("Không có dữ liệu hợp lệ.")
+    st.stop()
 
 # ══════════════════════════════════════════════════════════════
 #  SIDEBAR FILTERS
@@ -191,359 +228,408 @@ if df_all.empty:
 st.sidebar.markdown("---")
 st.sidebar.markdown("## 🔍 Bộ lọc")
 
-# Chế độ xem: toàn phòng KD hoặc 1 KH
-view_mode = st.sidebar.radio("Chế độ xem", ["📋 Tổng quan Phòng KD", "👤 Chi tiết Khách hàng"])
+view_mode = st.sidebar.radio("📌 Chế độ xem", ["Theo Khách hàng", "Theo Phòng KD"])
 
-pkd_list = sorted(df_all["PKD"].dropna().unique())
-pkd_sel  = st.sidebar.multiselect("🏢 Phòng KD", pkd_list, default=pkd_list)
-
-# Bộ lọc thời gian theo cụm
-time_level = st.sidebar.selectbox("⏱ Cụm thời gian", ["Tháng","Quý","Năm"])
-
-nam_list  = sorted(df_all["Năm"].dropna().unique())
-quy_list  = sorted(df_all["Quý"].dropna().unique())
-thang_list= sorted(df_all["Tháng"].dropna().unique())
-
-if time_level == "Năm":
-    sel_time = st.sidebar.multiselect("Chọn Năm",  nam_list,   default=nam_list)
-    time_col = "Năm"
-elif time_level == "Quý":
-    sel_time = st.sidebar.multiselect("Chọn Quý",  quy_list,   default=quy_list)
-    time_col = "Quý"
+if view_mode == "Theo Phòng KD":
+    pkd_opts = sorted(df_all["Mã nhóm KH"].dropna().astype(str).unique()) if "Mã nhóm KH" in df_all.columns else []
+    pkd_chon = st.sidebar.selectbox("🏢 Phòng KD", ["Tất cả"] + pkd_opts)
+    if pkd_chon != "Tất cả" and "Mã nhóm KH" in df_all.columns:
+        df_scope = df_all[df_all["Mã nhóm KH"].astype(str) == pkd_chon].copy()
+    else:
+        df_scope = df_all.copy()
+    scope_label = f"Phòng KD: {pkd_chon}"
+    single_kh = False
 else:
-    sel_time = st.sidebar.multiselect("Chọn Tháng",thang_list, default=thang_list)
-    time_col = "Tháng"
+    kh_list = sorted(df_all["Tên khách hàng"].dropna().astype(str).unique())
+    kh = st.sidebar.selectbox("👤 Khách hàng", kh_list)
+    df_scope = df_all[df_all["Tên khách hàng"].astype(str) == kh].copy()
+    scope_label = kh
+    single_kh = True
 
-df_pkd = df_all[df_all["PKD"].isin(pkd_sel) & df_all[time_col].isin(sel_time)].copy()
-
-if view_mode == "👤 Chi tiết Khách hàng":
-    kh_list = sorted(df_pkd["Tên khách hàng"].dropna().astype(str).unique())
-    kh_sel  = st.sidebar.selectbox("👤 Khách hàng", kh_list)
-    df_view = df_pkd[df_pkd["Tên khách hàng"].astype(str) == kh_sel].copy()
-    page_title = f"👤 {kh_sel}"
-else:
-    kh_sel  = None
-    df_view = df_pkd.copy()
-    page_title = "📋 Tổng quan Phòng Kinh Doanh"
-
-df_ban  = df_view[df_view["Loại GD"] == "Xuất bán"].copy()
-df_tra  = df_view[df_view["Loại GD"] == "Trả hàng"].copy()
-df_bs   = df_view[df_view["Loại GD"] == "Xuất bổ sung"].copy()
+# Filter thời gian
+st.sidebar.markdown("**📅 Cụm thời gian**")
+time_col_map = {"Năm": "Nam", "Quý": "Quy", "Tháng": "Thang"}
+time_level_label = st.sidebar.radio("Xem theo", ["Năm", "Quý", "Tháng"])
+time_col = time_col_map[time_level_label]
+time_vals = sorted(df_scope[time_col].dropna().unique())
+time_chon = st.sidebar.multiselect(f"Chọn {time_level_label}", time_vals, default=time_vals)
+df_scope  = df_scope[df_scope[time_col].isin(time_chon)].copy()
+df_ban    = df_scope[df_scope["Loai_GD"] == "Xuất bán"].copy()
 
 # ══════════════════════════════════════════════════════════════
-#  HEADER KPIs
+#  HEADER KPI
 # ══════════════════════════════════════════════════════════════
-st.title(page_title)
+st.markdown(f"# 📊 {scope_label}")
+ngay_min = df_scope["Ngày chứng từ"].min()
+ngay_max = df_scope["Ngày chứng từ"].max()
+st.markdown(f"*{ngay_min.strftime('%d/%m/%Y') if pd.notna(ngay_min) else '?'} → "
+            f"{ngay_max.strftime('%d/%m/%Y') if pd.notna(ngay_max) else '?'} "
+            f"| Cụm: **{time_level_label}** | {', '.join(time_chon[:4])}{'…' if len(time_chon)>4 else ''}*")
+
+if df_ban.empty:
+    st.warning("Không có dữ liệu xuất bán cho bộ lọc đã chọn.")
+    st.stop()
 
 tong_dt  = df_ban["Thành tiền bán"].sum()
-tong_von = df_ban["Thành tiền vốn"].sum()
 tong_ln  = df_ban["Lợi nhuận"].sum()
-bien_ln  = tong_ln/tong_dt*100 if tong_dt else 0
-tong_kl  = df_ban["Khối lượng"].sum()/1000
+tong_kl  = df_ban["Khối lượng"].sum() / 1000
+bien_ln  = (tong_ln / tong_dt * 100) if tong_dt else 0
 n_ct     = df_ban["Số chứng từ"].nunique() if "Số chứng từ" in df_ban.columns else len(df_ban)
 n_kh     = df_ban["Tên khách hàng"].nunique()
 
-c1,c2,c3,c4,c5,c6 = st.columns(6)
-c1.metric("💰 Doanh thu",    fmt(tong_dt)+" đ")
-c2.metric("📦 Số chứng từ",  fmt(n_ct))
-c3.metric("💹 Lợi nhuận",    fmt(tong_ln)+" đ")
-c4.metric("📊 Biên LN",      f"{bien_ln:.1f}%")
-c5.metric("⚖️ KL (tấn)",     f"{tong_kl:,.2f}")
-c6.metric("👥 Số KH",        str(n_kh))
-
-st.divider()
+c1,c2,c3,c4,c5 = st.columns(5)
+for col, val, lab in [
+    (c1, f"{fmt(tong_dt)} đ",       "💰 Doanh thu"),
+    (c2, f"{fmt(tong_ln)} đ",       "💹 Lợi nhuận"),
+    (c3, f"{bien_ln:.1f}%",          "📊 Biên LN"),
+    (c4, f"{tong_kl:,.2f} tấn",     "⚖️ Khối lượng"),
+    (c5, f"{n_ct} CT | {n_kh} KH", "📋 Chứng từ / KH"),
+]:
+    col.markdown(f'<div class="kpi-card"><div class="kpi-val">{val}</div>'
+                 f'<div class="kpi-lab">{lab}</div></div>', unsafe_allow_html=True)
+st.markdown("")
 
 # ══════════════════════════════════════════════════════════════
 #  TABS
 # ══════════════════════════════════════════════════════════════
-tabs = st.tabs([
+tab_pkd, tab_time, tab_sp, tab_ln_tab, tab_giao, tab_freq, tab_risk = st.tabs([
     "🏢 Phòng KD & KH",
-    "⏱ Phân tích Thời gian",
-    "📦 Sản phẩm & Thói quen",
+    "📅 Cụm thời gian",
+    "📦 Sản phẩm",
     "💹 Lợi nhuận & Chính sách",
     "🚚 Giao hàng",
-    "🔁 Tần suất mua hàng",
+    "🔁 Tần suất mua",
     "⚠️ Rủi ro & Bất thường",
 ])
-tab_pkd, tab_time, tab_sp, tab_ln, tab_gh, tab_freq, tab_risk = tabs
 
 # ══════════════════════════════════════════════════════════════
 #  TAB 1 – PHÒNG KD & KH
 # ══════════════════════════════════════════════════════════════
 with tab_pkd:
-    st.markdown('<div class="section-title">🏢 Doanh thu theo Phòng Kinh Doanh</div>', unsafe_allow_html=True)
+    has_pkd = "Mã nhóm KH" in df_ban.columns and "Tên nhóm KH" in df_ban.columns
 
-    df_pkd_sum = (df_ban.groupby("PKD")
+    st.markdown('<div class="section-title">🏢 Cơ cấu Doanh thu: Phòng KD → Khách hàng</div>', unsafe_allow_html=True)
+
+    if has_pkd:
+        df_pkd = (df_ban.groupby(["Mã nhóm KH","Tên nhóm KH"])
                   .agg(DT=("Thành tiền bán","sum"),
                        LN=("Lợi nhuận","sum"),
-                       KL=("Khối lượng", lambda x: x.sum()/1000),
-                       n_KH=("Tên khách hàng","nunique"),
-                       n_CT=("Số chứng từ","nunique") if "Số chứng từ" in df_ban.columns else ("Thành tiền bán","count"))
+                       KL=("Khối lượng", lambda x: round(x.sum()/1000,2)),
+                       N_KH=("Tên khách hàng","nunique"),
+                       N_CT=("Số chứng từ","nunique") if "Số chứng từ" in df_ban.columns else ("Thành tiền bán","count"))
                   .reset_index().sort_values("DT", ascending=False))
-    df_pkd_sum["Biên LN (%)"] = (df_pkd_sum["LN"]/df_pkd_sum["DT"].replace(0,np.nan)*100).round(1).fillna(0)
+        df_pkd["Bien"] = (df_pkd["LN"]/df_pkd["DT"]*100).round(1)
 
-    col_l, col_r = st.columns([1.5,1])
-    with col_l:
-        fig = px.bar(df_pkd_sum, x="PKD", y="DT", color="PKD", text_auto=".3s",
-                     title="Doanh thu theo Phòng KD",
-                     labels={"DT":"Doanh thu (VNĐ)","PKD":""})
-        fig.update_layout(showlegend=False, height=340)
-        st.plotly_chart(fig, use_container_width=True)
-    with col_r:
-        fig2 = px.scatter(df_pkd_sum, x="DT", y="Biên LN (%)", size="n_KH",
-                          color="PKD", text="PKD", title="DT vs Biên LN (bong bóng = số KH)",
-                          labels={"DT":"Doanh thu"})
-        fig2.update_traces(textposition="top center")
-        fig2.update_layout(height=340, showlegend=False)
-        st.plotly_chart(fig2, use_container_width=True)
+        # Sunburst
+        df_sun = (df_ban.groupby(["Tên nhóm KH","Tên khách hàng"])
+                  .agg(DT=("Thành tiền bán","sum")).reset_index())
+        fig_sun = px.sunburst(df_sun, path=["Tên nhóm KH","Tên khách hàng"],
+                               values="DT", title="Sunburst: Phòng KD → KH",
+                               color="DT", color_continuous_scale="Blues")
+        fig_sun.update_layout(height=480)
+        st.plotly_chart(fig_sun, use_container_width=True)
 
-    df_pkd_show = df_pkd_sum.copy()
-    df_pkd_show["DT"] = df_pkd_show["DT"].map(fmt)
-    df_pkd_show["LN"] = df_pkd_show["LN"].map(fmt)
-    df_pkd_show["KL"] = df_pkd_show["KL"].round(2)
-    df_pkd_show.columns = ["Phòng KD","Doanh thu","Lợi nhuận","KL (tấn)","Số KH","Số CT","Biên LN (%)"]
-    st.dataframe(df_pkd_show, use_container_width=True, hide_index=True)
+        # Bảng PKD
+        st.markdown('<div class="section-title">📋 Tổng hợp Phòng KD</div>', unsafe_allow_html=True)
+        df_pkd_s = df_pkd.copy()
+        df_pkd_s["DT"] = df_pkd_s["DT"].map(fmt)
+        df_pkd_s["LN"] = df_pkd_s["LN"].map(fmt)
+        df_pkd_s.columns = ["Mã PKD","Tên Phòng KD","DT (VNĐ)","LN (VNĐ)","KL (tấn)","Số KH","Số CT","Biên (%)"]
+        st.dataframe(df_pkd_s, use_container_width=True, hide_index=True)
+    else:
+        st.info("File không có cột Mã nhóm KH / Tên nhóm KH.")
 
-    # KH theo từng PKD
-    st.markdown('<div class="section-title">👥 Danh sách khách hàng theo Phòng KD</div>', unsafe_allow_html=True)
+    # Bảng KH hiệu quả
+    st.markdown('<div class="section-title">👥 Khách hàng & Hiệu quả kinh doanh</div>', unsafe_allow_html=True)
+    grp = ["Mã nhóm KH","Tên nhóm KH","Tên khách hàng"] if has_pkd else ["Tên khách hàng"]
+    df_kh_tbl = (df_ban.groupby(grp)
+                 .agg(DT=("Thành tiền bán","sum"),
+                      LN=("Lợi nhuận","sum"),
+                      KL=("Khối lượng", lambda x: round(x.sum()/1000,2)),
+                      N_CT=("Số chứng từ","nunique") if "Số chứng từ" in df_ban.columns else ("Thành tiền bán","count"),
+                      N_SP=("Tên hàng","nunique") if "Tên hàng" in df_ban.columns else ("Thành tiền bán","count"))
+                 .reset_index().sort_values("DT", ascending=False))
+    df_kh_tbl["Bien"] = (df_kh_tbl["LN"]/df_kh_tbl["DT"]*100).round(1)
+    df_kh_tbl["DT"]   = df_kh_tbl["DT"].map(fmt)
+    df_kh_tbl["LN"]   = df_kh_tbl["LN"].map(fmt)
+    st.dataframe(df_kh_tbl, use_container_width=True, hide_index=True)
 
-    for pkd_val in sorted(df_ban["PKD"].unique()):
-        df_p = df_ban[df_ban["PKD"] == pkd_val]
-        df_kh_sum = (df_p.groupby("Tên khách hàng")
-                     .agg(DT=("Thành tiền bán","sum"),
-                          LN=("Lợi nhuận","sum"),
-                          KL=("Khối lượng", lambda x: round(x.sum()/1000,2)),
-                          n_CT=("Số chứng từ","nunique") if "Số chứng từ" in df_p.columns else ("Thành tiền bán","count"),
-                          n_SP=("Tên hàng","nunique") if "Tên hàng" in df_p.columns else ("Thành tiền bán","count"))
-                     .reset_index().sort_values("DT", ascending=False))
-        df_kh_sum["Biên LN (%)"] = (df_kh_sum["LN"]/df_kh_sum["DT"].replace(0,np.nan)*100).round(1).fillna(0)
-        df_kh_sum["DT"] = df_kh_sum["DT"].map(fmt)
-        df_kh_sum["LN"] = df_kh_sum["LN"].map(fmt)
-        df_kh_sum.columns = ["Khách hàng","DT (VNĐ)","LN (VNĐ)","KL (tấn)","Số CT","Số SP","Biên LN (%)"]
+    # Bar top KH (màu = biên LN)
+    df_bar = (df_ban.groupby("Tên khách hàng")
+              .agg(DT=("Thành tiền bán","sum"), LN=("Lợi nhuận","sum"))
+              .reset_index().sort_values("DT",ascending=False).head(15))
+    df_bar["Bien"] = (df_bar["LN"]/df_bar["DT"]*100).round(1)
+    fig_bar = px.bar(df_bar, x="Tên khách hàng", y="DT", color="Bien",
+                     color_continuous_scale="RdYlGn", text_auto=".3s",
+                     title="Top 15 KH – Doanh thu (màu = Biên LN%)",
+                     labels={"DT":"DT (VNĐ)","Bien":"Biên LN %"})
+    fig_bar.update_layout(xaxis_tickangle=-30, height=420)
+    st.plotly_chart(fig_bar, use_container_width=True)
 
-        with st.expander(f"🏢 {pkd_val}  —  {len(df_kh_sum)} KH", expanded=True):
-            fig_kh = px.bar(df_kh_sum.head(15), x="Khách hàng", y="DT (VNĐ)",
-                            color="Biên LN (%)", color_continuous_scale="RdYlGn",
-                            title=f"Top KH – {pkd_val}", text_auto=True)
-            fig_kh.update_layout(xaxis_tickangle=-30, height=320, showlegend=False)
-            st.plotly_chart(fig_kh, use_container_width=True)
-            st.dataframe(df_kh_sum, use_container_width=True, hide_index=True)
+    # Khu vực
+    if "Khu vực" in df_ban.columns:
+        st.markdown('<div class="section-title">🗺️ Doanh thu theo Khu vực</div>', unsafe_allow_html=True)
+        df_kv = (df_ban.groupby("Khu vực")
+                 .agg(DT=("Thành tiền bán","sum"), LN=("Lợi nhuận","sum"),
+                      N_KH=("Tên khách hàng","nunique"))
+                 .reset_index())
+        df_kv["Bien"] = (df_kv["LN"]/df_kv["DT"]*100).round(1)
+        c1,c2 = st.columns(2)
+        with c1:
+            fig_kv = px.pie(df_kv, names="Khu vực", values="DT", hole=0.4,
+                            title="Cơ cấu DT theo Khu vực")
+            st.plotly_chart(fig_kv, use_container_width=True)
+        with c2:
+            df_kv2 = df_kv.copy()
+            df_kv2["DT"] = df_kv2["DT"].map(fmt)
+            df_kv2["LN"] = df_kv2["LN"].map(fmt)
+            st.dataframe(df_kv2, use_container_width=True, hide_index=True)
 
 # ══════════════════════════════════════════════════════════════
-#  TAB 2 – PHÂN TÍCH THỜI GIAN
+#  TAB 2 – CỤM THỜI GIAN
 # ══════════════════════════════════════════════════════════════
 with tab_time:
-    st.markdown(f'<div class="section-title">⏱ Phân tích theo {time_level} – Drill-down Năm → Quý → Tháng</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="section-title">📅 Phân tích theo: {time_level_label}</div>', unsafe_allow_html=True)
 
-    # Drill-down 3 cấp
-    for level, grp_col in [("Năm","Năm"),("Quý","Quý"),("Tháng","Tháng")]:
-        df_t = (df_ban.groupby(grp_col)
-                .agg(DT=("Thành tiền bán","sum"),
-                     LN=("Lợi nhuận","sum"),
+    df_t = (df_ban.groupby(time_col)
+            .agg(DT=("Thành tiền bán","sum"),
+                 LN=("Lợi nhuận","sum"),
+                 KL=("Khối lượng", lambda x: round(x.sum()/1000,3)),
+                 SL=("Số lượng","sum"),
+                 N_CT=("Số chứng từ","nunique") if "Số chứng từ" in df_ban.columns else ("Thành tiền bán","count"),
+                 N_KH=("Tên khách hàng","nunique"))
+            .reset_index().sort_values(time_col))
+    df_t["Bien"] = (df_t["LN"]/df_t["DT"].replace(0, np.nan)*100).round(1).fillna(0)
+    df_t["Tang_truong"] = (df_t["DT"].pct_change()*100).round(1)
+
+    fig = make_subplots(rows=3, cols=1, shared_xaxes=True,
+                        subplot_titles=("Doanh thu & Lợi nhuận (VNĐ)",
+                                        "Khối lượng (tấn) & Số lượng (cái)",
+                                        "Biên LN (%) & Tăng trưởng DT (%)"),
+                        vertical_spacing=0.08)
+    fig.add_trace(go.Bar(x=df_t[time_col], y=df_t["DT"], name="Doanh thu",
+                         marker_color="#4e79d4", opacity=0.85), row=1, col=1)
+    fig.add_trace(go.Scatter(x=df_t[time_col], y=df_t["LN"], name="Lợi nhuận",
+                             mode="lines+markers", line=dict(color="#26c281",width=2)), row=1, col=1)
+    fig.add_trace(go.Bar(x=df_t[time_col], y=df_t["KL"], name="KL (tấn)",
+                         marker_color="#9b59b6", opacity=0.8), row=2, col=1)
+    fig.add_trace(go.Scatter(x=df_t[time_col], y=df_t["SL"], name="SL (cái)",
+                             mode="lines+markers", line=dict(color="#f0a500",width=2)), row=2, col=1)
+    fig.add_trace(go.Scatter(x=df_t[time_col], y=df_t["Bien"], name="Biên LN (%)",
+                             mode="lines+markers+text",
+                             text=[f"{v:.1f}%" for v in df_t["Bien"]],
+                             textposition="top center",
+                             line=dict(color="#e74c3c",width=2)), row=3, col=1)
+    fig.add_trace(go.Bar(x=df_t[time_col], y=df_t["Tang_truong"],
+                         name="Tăng trưởng (%)", marker_color="#4e79d4", opacity=0.4), row=3, col=1)
+    fig.update_layout(height=680, legend=dict(orientation="h", y=-0.08))
+    st.plotly_chart(fig, use_container_width=True)
+
+    # Bảng
+    df_t_s = df_t.copy()
+    df_t_s["DT"] = df_t_s["DT"].map(fmt)
+    df_t_s["LN"] = df_t_s["LN"].map(fmt)
+    df_t_s = df_t_s.drop(columns=["Tang_truong"], errors="ignore")
+    df_t_s.columns = [time_level_label,"DT (VNĐ)","LN (VNĐ)","KL (tấn)","SL (cái)","Số CT","Số KH","Biên (%)"]
+    st.dataframe(df_t_s, use_container_width=True, hide_index=True)
+
+    # Drill-down tháng khi đang xem Năm/Quý
+    if time_level_label in ["Năm","Quý"] and single_kh:
+        st.markdown('<div class="section-title">🔎 Chi tiết từng tháng</div>', unsafe_allow_html=True)
+        df_m = (df_ban.groupby("Thang")
+                .agg(DT=("Thành tiền bán","sum"), LN=("Lợi nhuận","sum"),
                      KL=("Khối lượng", lambda x: round(x.sum()/1000,2)),
-                     n_CT=("Số chứng từ","nunique") if "Số chứng từ" in df_ban.columns else ("Thành tiền bán","count"),
-                     n_KH=("Tên khách hàng","nunique"))
-                .reset_index().sort_values(grp_col))
-        df_t["Biên (%)"] = (df_t["LN"]/df_t["DT"].replace(0,np.nan)*100).round(1).fillna(0)
-        df_t["Tăng trưởng DT (%)"] = df_t["DT"].pct_change()*100
+                     N_CT=("Số chứng từ","nunique") if "Số chứng từ" in df_ban.columns else ("Thành tiền bán","count"))
+                .reset_index().sort_values("Thang"))
+        df_m["Bien"] = (df_m["LN"]/df_m["DT"].replace(0,np.nan)*100).round(1).fillna(0)
+        df_m["DT"]   = df_m["DT"].map(fmt)
+        df_m["LN"]   = df_m["LN"].map(fmt)
+        df_m.columns = ["Tháng","DT (VNĐ)","LN (VNĐ)","KL (tấn)","Số CT","Biên (%)"]
+        st.dataframe(df_m, use_container_width=True, hide_index=True)
 
-        if df_t.empty or len(df_t) < 1:
-            continue
-
-        with st.expander(f"📅 Theo {level}", expanded=(level==time_level)):
-            fig = make_subplots(rows=2, cols=1, shared_xaxes=True,
-                                subplot_titles=(f"Doanh thu & KL (tấn) theo {level}",
-                                                f"Biên LN (%) & Tăng trưởng (%)"),
-                                vertical_spacing=0.12)
-            fig.add_trace(go.Bar(x=df_t[grp_col], y=df_t["DT"], name="Doanh thu",
-                                 marker_color="#4e79d4", opacity=0.85), row=1, col=1)
-            fig.add_trace(go.Scatter(x=df_t[grp_col], y=df_t["KL"], name="KL (tấn)",
-                                     mode="lines+markers", line=dict(color="#f0a500",width=2)), row=1, col=1)
-            fig.add_trace(go.Scatter(x=df_t[grp_col], y=df_t["Biên (%)"], name="Biên LN (%)",
-                                     mode="lines+markers+text",
-                                     text=[f"{v:.1f}%" for v in df_t["Biên (%)"]],
-                                     textposition="top center",
-                                     line=dict(color="#26c281",width=2)), row=2, col=1)
-            fig.add_trace(go.Bar(x=df_t[grp_col], y=df_t["Tăng trưởng DT (%)"],
-                                 name="Tăng trưởng (%)",
-                                 marker_color=["#26c281" if v>=0 else "#e74c3c"
-                                               for v in df_t["Tăng trưởng DT (%)"].fillna(0)],
-                                 opacity=0.7), row=2, col=1)
-            fig.update_layout(height=480, barmode="overlay",
-                              legend=dict(orientation="h", y=-0.12))
-            st.plotly_chart(fig, use_container_width=True)
-
-            show = df_t.copy()
-            show["DT"] = show["DT"].map(fmt)
-            show["LN"] = show["LN"].map(fmt)
-            show["Tăng trưởng DT (%)"] = show["Tăng trưởng DT (%)"].round(1)
-            show.columns = [grp_col,"DT (VNĐ)","LN (VNĐ)","KL (tấn)","Số CT","Số KH","Biên (%)","Tăng trưởng (%)"]
-            st.dataframe(show, use_container_width=True, hide_index=True)
-
-    # Heatmap KH × Tháng
-    st.markdown('<div class="section-title">🗓 Heatmap Doanh thu – KH × Tháng</div>', unsafe_allow_html=True)
-    df_hm = (df_ban.groupby(["Tên khách hàng","Tháng"])["Thành tiền bán"]
-             .sum().reset_index())
-    df_pivot = df_hm.pivot(index="Tên khách hàng", columns="Tháng", values="Thành tiền bán").fillna(0)
-    top_kh_hm = df_pivot.sum(axis=1).nlargest(min(20,len(df_pivot))).index
-    fig_hm = px.imshow(df_pivot.loc[top_kh_hm]/1e6,
-                       labels=dict(x="Tháng",y="Khách hàng",color="DT (triệu VNĐ)"),
-                       color_continuous_scale="Blues", aspect="auto",
-                       title="Doanh thu (triệu VNĐ) – Top KH × Tháng")
-    fig_hm.update_layout(height=max(350, len(top_kh_hm)*26))
-    st.plotly_chart(fig_hm, use_container_width=True)
+    # Heatmap KH × Tháng khi xem theo PKD
+    if not single_kh:
+        st.markdown('<div class="section-title">🗓️ Heatmap DT: KH × Tháng</div>', unsafe_allow_html=True)
+        df_hm = (df_ban.groupby(["Tên khách hàng","Thang"])["Thành tiền bán"]
+                 .sum().reset_index())
+        df_piv = df_hm.pivot(index="Tên khách hàng", columns="Thang",
+                              values="Thành tiền bán").fillna(0)
+        fig_hm = px.imshow(df_piv, color_continuous_scale="Blues", aspect="auto",
+                            title="Doanh thu (VNĐ): KH × Tháng")
+        fig_hm.update_layout(height=max(350, len(df_piv)*26))
+        st.plotly_chart(fig_hm, use_container_width=True)
 
 # ══════════════════════════════════════════════════════════════
-#  TAB 3 – SẢN PHẨM & THÓI QUEN
+#  TAB 3 – SẢN PHẨM
 # ══════════════════════════════════════════════════════════════
 with tab_sp:
-    st.markdown('<div class="section-title">📦 Cơ cấu sản phẩm & thói quen mua hàng</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">📦 Cơ cấu sản phẩm & Thói quen mua</div>', unsafe_allow_html=True)
 
-    c1,c2 = st.columns(2)
-    df_nhom = (df_ban.groupby("Nhóm SP")
-               .agg(So_lan=("Nhóm SP","count"),
+    df_nhom = (df_ban.groupby("Nhom_SP")
+               .agg(N=("Nhom_SP","count"),
                     KL=("Khối lượng", lambda x: round(x.sum()/1000,2)),
                     DT=("Thành tiền bán","sum"))
                .reset_index().sort_values("DT", ascending=False))
+
+    c1,c2 = st.columns(2)
     with c1:
-        fig = px.bar(df_nhom, x="Nhóm SP", y="DT", color="Nhóm SP",
-                     text_auto=".3s", title="Doanh thu theo nhóm SP",
-                     labels={"DT":"Doanh thu (VNĐ)","Nhóm SP":""})
-        fig.update_layout(showlegend=False, height=340)
-        st.plotly_chart(fig, use_container_width=True)
+        fig1 = px.bar(df_nhom, x="Nhom_SP", y="DT", color="Nhom_SP", text_auto=".3s",
+                      title="DT theo nhóm SP", labels={"DT":"DT (VNĐ)","Nhom_SP":""})
+        fig1.update_layout(showlegend=False, height=360)
+        st.plotly_chart(fig1, use_container_width=True)
     with c2:
-        fig2 = px.pie(df_nhom, names="Nhóm SP", values="So_lan",
-                      title="Tỷ trọng số lần mua", hole=0.45)
-        fig2.update_layout(height=340)
+        fig2 = px.pie(df_nhom, names="Nhom_SP", values="N", hole=0.45,
+                      title="Tỷ trọng số lần mua")
+        fig2.update_layout(height=360)
         st.plotly_chart(fig2, use_container_width=True)
 
-    st.markdown('<div class="section-title">🏆 Top 15 sản phẩm</div>', unsafe_allow_html=True)
     if "Tên hàng" in df_ban.columns:
+        st.markdown('<div class="section-title">🏆 Top 15 sản phẩm & xu hướng</div>', unsafe_allow_html=True)
         df_top = (df_ban.groupby("Tên hàng")
-                  .agg(n=("Tên hàng","count"),
+                  .agg(N=("Tên hàng","count"),
                        KL=("Khối lượng", lambda x: round(x.sum()/1000,2)),
-                       SL=("Số lượng","sum"),
                        DT=("Thành tiền bán","sum"))
-                  .reset_index().sort_values("DT", ascending=False).head(15))
-        df_top["DT"] = df_top["DT"].map(fmt)
-        df_top.columns = ["Sản phẩm","Số lần","KL (tấn)","SL (cái)","DT (VNĐ)"]
-        st.dataframe(df_top, use_container_width=True, hide_index=True)
+                  .reset_index().sort_values("DT",ascending=False).head(15))
 
-    # Thói quen: nhóm SP theo tháng
-    st.markdown('<div class="section-title">📅 Thói quen mua nhóm SP theo thời gian</div>', unsafe_allow_html=True)
-    df_sp_t = (df_ban.groupby(["Nhóm SP", time_col])["Thành tiền bán"]
-               .sum().reset_index())
-    fig3 = px.line(df_sp_t, x=time_col, y="Thành tiền bán",
-                   color="Nhóm SP", markers=True,
-                   title=f"Doanh thu nhóm SP theo {time_level}",
-                   labels={"Thành tiền bán":"Doanh thu (VNĐ)"})
-    fig3.update_layout(height=360)
-    st.plotly_chart(fig3, use_container_width=True)
+        fig3 = px.bar(df_top, y="Tên hàng", x="DT", orientation="h",
+                      text_auto=".3s", color="DT", color_continuous_scale="Blues",
+                      title="Top 15 sản phẩm theo DT")
+        fig3.update_layout(height=480, yaxis=dict(autorange="reversed"))
+        st.plotly_chart(fig3, use_container_width=True)
 
-    # Mục đích sử dụng
+        top5 = df_top["Tên hàng"].head(5).tolist()
+        df_tr = (df_ban[df_ban["Tên hàng"].isin(top5)]
+                 .groupby(["Tên hàng", time_col])["Thành tiền bán"].sum().reset_index())
+        if not df_tr.empty:
+            fig_tr = px.line(df_tr, x=time_col, y="Thành tiền bán", color="Tên hàng",
+                             markers=True, title=f"Xu hướng Top 5 SP theo {time_level_label}",
+                             labels={"Thành tiền bán":"DT (VNĐ)", time_col: time_level_label})
+            fig_tr.update_layout(height=380)
+            st.plotly_chart(fig_tr, use_container_width=True)
+
     st.markdown('<div class="section-title">🎯 Nhận định mục đích sử dụng</div>', unsafe_allow_html=True)
-    nhom_set = set(df_nhom["Nhóm SP"])
-    insight_map = {
-        "Ống HDPE":        ("🔵","Dự án hạ tầng kỹ thuật, cấp thoát nước công trình lớn, dự án nhà nước"),
-        "Ống PVC nước":    ("🟢","Xây dựng dân dụng, công nghiệp, nông nghiệp"),
-        "Ống PVC bơm cát": ("🟡","Thuỷ lợi, nông nghiệp, nuôi trồng thuỷ sản"),
-        "Ống PPR":         ("🟠","Hệ thống nước nóng/lạnh nội thất, chung cư, văn phòng"),
-        "Lõi PVC":         ("⚪","Đại lý / nhà sản xuất thứ cấp – mua nguyên liệu thô"),
-        "Phụ kiện & Keo":  ("🔴","Tự thi công hoặc bán lại trọn gói – nhà thầu cơ điện"),
-    }
-    for k,(icon,desc) in insight_map.items():
+    nhom_set = set(df_nhom["Nhom_SP"].tolist())
+    for k, (lvl, msg) in {
+        "Ống HDPE":        ("info",   "🔵 <b>Ống HDPE</b>: Dự án hạ tầng cấp thoát nước, thuỷ lợi công trình lớn."),
+        "Ống PVC nước":    ("low",    "🟢 <b>Ống PVC nước</b>: Xây dựng dân dụng, công nghiệp, khu công nghiệp."),
+        "Ống PVC bơm cát": ("low",    "🟡 <b>Ống PVC bơm cát</b>: Thuỷ lợi, nông nghiệp, nuôi trồng thuỷ sản."),
+        "Ống PPR":         ("info",   "🟠 <b>Ống PPR</b>: Hệ thống nước nóng/lạnh nội thất."),
+        "Lõi PVC":         ("medium", "⚪ <b>Lõi PVC</b>: Có thể là đại lý hoặc nhà SX thứ cấp."),
+        "Phụ kiện & Keo":  ("low",    "🔴 <b>Phụ kiện & Keo</b>: Tự thi công hoặc bán lại trọn gói."),
+    }.items():
         if k in nhom_set:
-            st.markdown(f'<div class="risk-low">{icon} <b>{k}</b>: {desc}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="risk-{lvl}">{msg}</div>', unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════
-#  TAB 4 – LỢI NHUẬN & CHÍNH SÁCH
+#  TAB 4 – LỢI NHUẬN
 # ══════════════════════════════════════════════════════════════
-with tab_ln:
-    st.markdown('<div class="section-title">💹 Biến động lợi nhuận & nhận diện chính sách</div>', unsafe_allow_html=True)
+with tab_ln_tab:
+    st.markdown('<div class="section-title">💹 Lợi nhuận & Phát hiện Chính sách</div>', unsafe_allow_html=True)
 
-    df_ln = (df_ban.groupby(time_col)
-             .agg(DT=("Thành tiền bán","sum"),
-                  Von=("Thành tiền vốn","sum"),
-                  LN=("Lợi nhuận","sum"))
-             .reset_index().sort_values(time_col))
-    df_ln["Biên (%)"] = (df_ln["LN"]/df_ln["DT"].replace(0,np.nan)*100).round(2).fillna(0)
-    df_ln["Δ Biên"]   = df_ln["Biên (%)"].diff().round(2)
+    df_ln_t = (df_ban.groupby(time_col)
+               .agg(DT=("Thành tiền bán","sum"),
+                    Von=("Thành tiền vốn","sum"),
+                    LN=("Lợi nhuận","sum"))
+               .reset_index().sort_values(time_col))
+    df_ln_t["Bien"] = (df_ln_t["LN"]/df_ln_t["DT"].replace(0,np.nan)*100).round(2).fillna(0)
 
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True,
-                        subplot_titles=("DT / Vốn / LN (VNĐ)", f"Biên LN (%) theo {time_level}"),
+                        subplot_titles=("DT / Vốn / LN (VNĐ)", f"Biên LN (%) theo {time_level_label}"),
                         vertical_spacing=0.12)
-    fig.add_trace(go.Bar(x=df_ln[time_col], y=df_ln["DT"],  name="Doanh thu", marker_color="#4e79d4"), row=1, col=1)
-    fig.add_trace(go.Bar(x=df_ln[time_col], y=df_ln["Von"], name="Giá vốn",   marker_color="#c0392b"), row=1, col=1)
-    fig.add_trace(go.Scatter(x=df_ln[time_col], y=df_ln["LN"], name="LN",
-                             mode="lines+markers", line=dict(color="#26c281",width=2)), row=1, col=1)
-    fig.add_trace(go.Scatter(x=df_ln[time_col], y=df_ln["Biên (%)"], name="Biên LN (%)",
+    fig.add_trace(go.Bar(x=df_ln_t[time_col], y=df_ln_t["DT"],  name="Doanh thu",
+                         marker_color="#4e79d4"), row=1, col=1)
+    fig.add_trace(go.Bar(x=df_ln_t[time_col], y=df_ln_t["Von"], name="Giá vốn",
+                         marker_color="#e05c5c"), row=1, col=1)
+    fig.add_trace(go.Scatter(x=df_ln_t[time_col], y=df_ln_t["LN"], name="LN",
+                             mode="lines+markers", line=dict(color="#26c281",width=2.5)), row=1, col=1)
+    fig.add_trace(go.Scatter(x=df_ln_t[time_col], y=df_ln_t["Bien"], name="Biên LN (%)",
                              mode="lines+markers+text",
-                             text=[f"{v:.1f}%" for v in df_ln["Biên (%)"]],
+                             text=[f"{v:.1f}%" for v in df_ln_t["Bien"]],
                              textposition="top center",
-                             line=dict(color="#f0a500",width=2)), row=2, col=1)
-    fig.update_layout(height=500, barmode="group", legend=dict(orientation="h",y=-0.12))
+                             line=dict(color="#f0a500",width=2.5)), row=2, col=1)
+    fig.update_layout(height=520, barmode="group")
     st.plotly_chart(fig, use_container_width=True)
 
-    # Phát hiện tháng bất thường
-    if len(df_ln) >= 2:
-        mean_b = df_ln["Biên (%)"].mean()
-        std_b  = df_ln["Biên (%)"].std() or 1
-        low_b  = df_ln[df_ln["Biên (%)"] < mean_b - std_b]
-        high_b = df_ln[df_ln["Biên (%)"] > mean_b + std_b*1.5]
+    # Phát hiện bất thường
+    if len(df_ln_t) >= 2:
+        mb = df_ln_t["Bien"].mean()
+        sb = df_ln_t["Bien"].std() or 1
+        st.markdown('<div class="section-title">🔍 Kỳ nghi có Chiết khấu / Chính sách đặc biệt</div>', unsafe_allow_html=True)
+        for _, r in df_ln_t.iterrows():
+            diff = r["Bien"] - mb
+            if diff < -sb * 1.5:
+                st.markdown(f'<div class="risk-high">🔴 <b>{r[time_col]}</b>: Biên LN = {r["Bien"]:.1f}% (TB: {mb:.1f}%) → Nghi chiết khấu lớn / giá đặc biệt</div>', unsafe_allow_html=True)
+            elif diff < -sb:
+                st.markdown(f'<div class="risk-medium">🟡 <b>{r[time_col]}</b>: Biên LN = {r["Bien"]:.1f}% (TB: {mb:.1f}%) → Cần kiểm tra chính sách</div>', unsafe_allow_html=True)
 
-        st.markdown('<div class="section-title">🔍 Phát hiện kỳ có chính sách đặc biệt</div>', unsafe_allow_html=True)
-        for _, r in low_b.iterrows():
-            st.markdown(f'<div class="risk-medium">⚠️ {time_level} <b>{r[time_col]}</b>: Biên LN = <b>{r["Biên (%)"]:.1f}%</b> (TB={mean_b:.1f}%) → khả năng có <b>chiết khấu, khuyến mãi, hoặc ép giá</b></div>', unsafe_allow_html=True)
-        for _, r in high_b.iterrows():
-            st.markdown(f'<div class="risk-low">✅ {time_level} <b>{r[time_col]}</b>: Biên LN = <b>{r["Biên (%)"]:.1f}%</b> → cao bất thường, kiểm tra lại đơn giá</div>', unsafe_allow_html=True)
-        if low_b.empty and high_b.empty:
-            st.markdown('<div class="risk-low">✅ Biên LN ổn định, không phát hiện kỳ bất thường.</div>', unsafe_allow_html=True)
+    # Giá bán < giá vốn
+    st.markdown('<div class="section-title">❗ Dòng Giá bán &lt; Giá vốn (Bán lỗ)</div>', unsafe_allow_html=True)
+    if "Giá bán" in df_ban.columns and "Giá vốn" in df_ban.columns:
+        df_lo = df_ban[(df_ban["Giá bán"]>0)&(df_ban["Giá vốn"]>0)&(df_ban["Giá bán"]<df_ban["Giá vốn"])]
+        if not df_lo.empty:
+            st.error(f"⚠️ {len(df_lo)} dòng có giá bán < giá vốn")
+            cols_lo = [c for c in ["Ngày chứng từ","Tên khách hàng","Tên hàng",
+                                    "Giá bán","Giá vốn","Lợi nhuận","Ghi chú"] if c in df_lo.columns]
+            st.dataframe(df_lo[cols_lo], use_container_width=True, hide_index=True)
+        else:
+            st.markdown('<div class="risk-low">✅ Không có dòng nào giá bán thấp hơn giá vốn.</div>', unsafe_allow_html=True)
 
-    # Trả hàng
+    # Hàng trả lại
+    df_tra = df_scope[df_scope["Loai_GD"] == "Trả hàng"]
     if not df_tra.empty:
-        st.markdown('<div class="section-title">↩️ Đơn hàng trả lại</div>', unsafe_allow_html=True)
-        cols_tra = [c for c in ["Số chứng từ","Ngày chứng từ","Tên khách hàng",
-                                 "Tên hàng","Khối lượng","Thành tiền bán","Ghi chú"] if c in df_tra.columns]
-        df_tra_s = df_tra[cols_tra].copy()
+        st.markdown('<div class="section-title">↩️ Hàng trả lại</div>', unsafe_allow_html=True)
+        cols_tr = [c for c in ["Số chứng từ","Ngày chứng từ","Tên khách hàng",
+                                "Tên hàng","Thành tiền bán","Ghi chú"] if c in df_tra.columns]
+        df_tra_s = df_tra[cols_tr].copy()
         if "Thành tiền bán" in df_tra_s.columns:
             df_tra_s["Thành tiền bán"] = df_tra_s["Thành tiền bán"].map(fmt)
+        st.error(f"Tổng GT trả hàng: {fmt(abs(df_tra['Thành tiền bán'].sum()))} VNĐ")
         st.dataframe(df_tra_s, use_container_width=True, hide_index=True)
-        st.error(f"Tổng trả hàng: **{fmt(abs(df_tra['Thành tiền bán'].sum()))} VNĐ**")
 
 # ══════════════════════════════════════════════════════════════
 #  TAB 5 – GIAO HÀNG
 # ══════════════════════════════════════════════════════════════
-with tab_gh:
-    st.markdown('<div class="section-title">🚚 Hình thức & địa điểm giao hàng</div>', unsafe_allow_html=True)
-
+with tab_giao:
+    st.markdown('<div class="section-title">🚚 Hình thức & Địa điểm giao hàng</div>', unsafe_allow_html=True)
     c1,c2 = st.columns(2)
     with c1:
         if "Freight Terms" in df_ban.columns:
-            df_ft = df_ban["Freight Terms"].value_counts().reset_index()
-            df_ft.columns = ["Hình thức","Số lần"]
-            fig_ft = px.pie(df_ft, names="Hình thức", values="Số lần",
-                            title="Điều kiện giao hàng", hole=0.4)
-            st.plotly_chart(fig_ft, use_container_width=True)
+            ft = df_ban["Freight Terms"].value_counts().reset_index()
+            ft.columns = ["Hình thức","Số lần"]
+            st.plotly_chart(px.pie(ft, names="Hình thức", values="Số lần",
+                                   title="Điều kiện giao hàng", hole=0.4),
+                            use_container_width=True)
     with c2:
         if "Shipping method" in df_ban.columns:
-            df_sm = df_ban["Shipping method"].value_counts().reset_index()
-            df_sm.columns = ["Phương tiện","Số lần"]
-            fig_sm = px.pie(df_sm, names="Phương tiện", values="Số lần",
-                            title="Phương tiện vận chuyển", hole=0.4)
-            st.plotly_chart(fig_sm, use_container_width=True)
+            sm = df_ban["Shipping method"].value_counts().reset_index()
+            sm.columns = ["Phương tiện","Số lần"]
+            st.plotly_chart(px.pie(sm, names="Phương tiện", values="Số lần",
+                                   title="Phương tiện vận chuyển", hole=0.4),
+                            use_container_width=True)
 
     if "Nơi giao hàng" in df_ban.columns:
         st.markdown('<div class="section-title">📍 Địa điểm giao hàng</div>', unsafe_allow_html=True)
         df_noi = (df_ban.groupby("Nơi giao hàng")
-                  .agg(n=("Nơi giao hàng","count"),
+                  .agg(N=("Nơi giao hàng","count"),
                        KL=("Khối lượng", lambda x: round(x.sum()/1000,2)),
                        DT=("Thành tiền bán","sum"))
-                  .reset_index().sort_values("DT", ascending=False))
+                  .reset_index().sort_values("DT",ascending=False))
         df_noi["DT"] = df_noi["DT"].map(fmt)
         df_noi.columns = ["Địa điểm","Số lần","KL (tấn)","DT (VNĐ)"]
         st.dataframe(df_noi, use_container_width=True, hide_index=True)
 
-    with st.expander("🚛 Xe & tài xế"):
+    if "Mã kho" in df_ban.columns:
+        st.markdown('<div class="section-title">🏭 Kho xuất hàng</div>', unsafe_allow_html=True)
+        df_kho = (df_ban.groupby("Mã kho")
+                  .agg(N=("Mã kho","count"), DT=("Thành tiền bán","sum"),
+                       KL=("Khối lượng", lambda x: round(x.sum()/1000,2)))
+                  .reset_index().sort_values("DT",ascending=False))
+        df_kho["DT"] = df_kho["DT"].map(fmt)
+        st.dataframe(df_kho, use_container_width=True, hide_index=True)
+        if df_ban["Mã kho"].nunique() >= 2:
+            st.markdown('<div class="risk-medium">🟡 KH nhận hàng từ nhiều kho – kiểm tra giá xuất kho & tính nhất quán.</div>', unsafe_allow_html=True)
+
+    with st.expander("🚛 Danh sách xe & tài xế"):
         xe_cols = [c for c in ["Biển số xe","Tài Xế","Tên ĐVVC","Shipping method",
                                 "Ngày chứng từ","Nơi giao hàng"] if c in df_ban.columns]
         if xe_cols:
@@ -554,185 +640,185 @@ with tab_gh:
 #  TAB 6 – TẦN SUẤT
 # ══════════════════════════════════════════════════════════════
 with tab_freq:
-    st.markdown('<div class="section-title">🔁 Tần suất mua hàng – Heatmap SP × Tháng</div>', unsafe_allow_html=True)
-
+    st.markdown('<div class="section-title">🔁 Heatmap tần suất: Sản phẩm × Tháng</div>', unsafe_allow_html=True)
     if "Tên hàng" in df_ban.columns:
-        df_freq_data = df_ban.groupby(["Tên hàng","Tháng"]).size().reset_index(name="n")
-        df_piv = df_freq_data.pivot(index="Tên hàng", columns="Tháng", values="n").fillna(0)
-        top20  = df_piv.sum(axis=1).nlargest(min(20,len(df_piv))).index
-        fig_h = px.imshow(df_piv.loc[top20],
+        df_fr = df_ban.groupby(["Tên hàng","Thang"]).size().reset_index(name="N")
+        df_piv = df_fr.pivot(index="Tên hàng", columns="Thang", values="N").fillna(0)
+        top_n = df_piv.sum(axis=1).nlargest(min(25, len(df_piv))).index
+        fig_h = px.imshow(df_piv.loc[top_n],
                           labels=dict(x="Tháng",y="Sản phẩm",color="Số lần"),
-                          color_continuous_scale="Blues", aspect="auto",
-                          title="Top 20 SP – Tần suất mua × Tháng")
-        fig_h.update_layout(height=max(380, len(top20)*24))
+                          title="Heatmap tần suất – Top SP × Tháng",
+                          color_continuous_scale="YlOrRd", aspect="auto")
+        fig_h.update_layout(height=max(400, len(top_n)*22))
         st.plotly_chart(fig_h, use_container_width=True)
 
-        st.markdown('<div class="section-title">📋 Chi tiết tần suất theo Quý (ghi rõ từng tháng)</div>', unsafe_allow_html=True)
-        for qval in sorted(df_ban["Quý"].dropna().unique()):
-            dq = df_ban[df_ban["Quý"]==qval]
-            agg = (dq.groupby(["Tên hàng","Tháng"])
-                   .agg(n=("Tên hàng","count"),
-                        KL=("Khối lượng", lambda x: round(x.sum()/1000,2)),
-                        DT=("Thành tiền bán","sum"))
-                   .reset_index().sort_values("DT",ascending=False))
-            agg["DT"] = agg["DT"].map(fmt)
-            agg.columns = ["Sản phẩm","Tháng","Số lần","KL (tấn)","DT (VNĐ)"]
-            with st.expander(f"📅 {qval}"):
+        st.markdown('<div class="section-title">📋 Chi tiết theo Quý – từng tháng</div>', unsafe_allow_html=True)
+        for q in sorted(df_ban["Quy"].dropna().unique()):
+            df_q = df_ban[df_ban["Quy"] == q]
+            months = sorted(df_q["Thang"].dropna().unique())
+            with st.expander(f"📅 {q}  |  {', '.join(months)}"):
+                agg = (df_q.groupby(["Tên hàng","Thang"])
+                       .agg(N=("Tên hàng","count"),
+                            KL=("Khối lượng", lambda x: round(x.sum()/1000,2)),
+                            DT=("Thành tiền bán","sum"))
+                       .reset_index().sort_values("DT",ascending=False))
+                agg["DT"] = agg["DT"].map(fmt)
+                agg.columns = ["Sản phẩm","Tháng","Số lần","KL (tấn)","DT (VNĐ)"]
                 st.dataframe(agg, use_container_width=True, hide_index=True)
 
 # ══════════════════════════════════════════════════════════════
-#  TAB 7 – RỦI RO & BẤT THƯỜNG
+#  TAB 7 – RỦI RO
 # ══════════════════════════════════════════════════════════════
 with tab_risk:
-    st.markdown('<div class="section-title">⚠️ Nhận diện rủi ro & dấu hiệu bất thường</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">⚠️ Nhận diện Rủi ro & Dấu hiệu Bất thường (12 nhóm)</div>', unsafe_allow_html=True)
 
-    risks  = []  # (level, title, detail)
+    risks  = []   # (level, category, message, detail_df_or_None)
     score  = 0
+    tong_dt_ban = df_ban["Thành tiền bán"].sum()
+    tong_ln_ban = df_ban["Lợi nhuận"].sum()
+    bien_tb     = (tong_ln_ban/tong_dt_ban*100) if tong_dt_ban else 0
 
-    tong_ban_v = df_ban["Thành tiền bán"].sum()
-    tong_tra_v = abs(df_tra["Thành tiền bán"].sum()) if not df_tra.empty else 0
-    tong_ln_v  = df_ban["Lợi nhuận"].sum()
-    bien_v     = tong_ln_v/tong_ban_v*100 if tong_ban_v else 0
-
-    # ── R1: Trả hàng ──────────────────────────────────────────
-    tl_tra = tong_tra_v/tong_ban_v*100 if tong_ban_v else 0
-    if tl_tra > 15:
-        score += 35
-        risks.append(("high","↩️ Tỷ lệ hàng trả rất cao",
-                       f"{tl_tra:.1f}% ({fmt(tong_tra_v)} VNĐ) — tranh chấp chất lượng nghiêm trọng hoặc giao sai đơn hàng"))
-    elif tl_tra > 5:
-        score += 20
-        risks.append(("medium","↩️ Hàng trả lại đáng chú ý",
-                       f"{tl_tra:.1f}% — cần xác minh nguyên nhân (chất lượng, giao sai, thay đổi dự án)"))
+    # R1 – Hàng trả lại
+    df_tra = df_scope[df_scope["Loai_GD"] == "Trả hàng"]
+    tong_tra = abs(df_tra["Thành tiền bán"].sum())
+    tl_tra   = (tong_tra/tong_dt_ban*100) if tong_dt_ban else 0
+    if tl_tra > 10:
+        score += 30
+        risks.append(("high","↩️ Trả hàng",
+                       f"Tỷ lệ trả hàng <b>{tl_tra:.1f}%</b> ({fmt(tong_tra)} VNĐ) — Rủi ro tranh chấp chất lượng / hủy HĐ cao", df_tra))
+    elif tl_tra > 3:
+        score += 15
+        risks.append(("medium","↩️ Trả hàng", f"Tỷ lệ trả hàng <b>{tl_tra:.1f}%</b> — Cần theo dõi", df_tra))
     else:
-        risks.append(("low","✅ Tỷ lệ trả hàng thấp", f"{tl_tra:.1f}%"))
+        risks.append(("low","↩️ Trả hàng", f"Tỷ lệ trả hàng thấp: {tl_tra:.1f}% ✓", None))
 
-    # ── R2: Biên LN tổng ─────────────────────────────────────
-    if bien_v < 0:
-        score += 40
-        risks.append(("high","💸 Lỗ ròng",
-                       f"Biên LN = {bien_v:.1f}% — bán dưới giá vốn, có thể do chiết khấu quá lớn hoặc trả hàng"))
-    elif bien_v < 5:
-        score += 25
-        risks.append(("high","💹 Biên LN rất thấp",
-                       f"{bien_v:.1f}% — cần kiểm tra chính sách giá, chiết khấu đặc biệt"))
-    elif bien_v < 15:
-        score += 10
-        risks.append(("medium","💹 Biên LN thấp hơn kỳ vọng", f"{bien_v:.1f}%"))
-    else:
-        risks.append(("low","✅ Biên LN bình thường", f"{bien_v:.1f}%"))
-
-    # ── R3: Xuất bổ sung / thay thế ──────────────────────────
-    if not df_bs.empty:
-        pct_bs = len(df_bs)/len(df_ban)*100 if len(df_ban) else 0
-        if pct_bs > 10:
-            score += 20
-            risks.append(("high","🔄 Tỷ lệ xuất bổ sung cao",
-                           f"{pct_bs:.1f}% dòng là bổ sung/thay thế — nhiều đơn giao nhầm, thiếu hàng, tranh chấp"))
+    # R2 – Giá bán < Giá vốn
+    if "Giá bán" in df_ban.columns and "Giá vốn" in df_ban.columns:
+        df_lo = df_ban[(df_ban["Giá bán"]>0)&(df_ban["Giá vốn"]>0)&(df_ban["Giá bán"]<df_ban["Giá vốn"])]
+        if not df_lo.empty:
+            score += 25
+            risks.append(("high","💸 Bán lỗ trực tiếp",
+                           f"<b>{len(df_lo)}</b> dòng giá bán &lt; giá vốn — bán lỗ hoặc sai dữ liệu giá", df_lo))
         else:
+            risks.append(("low","💸 Giá bán vs Giá vốn","Không có dòng nào giá bán < giá vốn ✓", None))
+
+    # R3 – Lợi nhuận âm (không phải trả hàng)
+    df_ln_am = df_ban[df_ban["Lợi nhuận"] < 0]
+    if not df_ln_am.empty:
+        tong_ln_am = abs(df_ln_am["Lợi nhuận"].sum())
+        score += 20
+        risks.append(("high","📉 Lợi nhuận âm",
+                       f"<b>{len(df_ln_am)}</b> dòng xuất bán có LN âm (tổng -{fmt(tong_ln_am)} VNĐ) — chiết khấu lớn hoặc sai giá vốn", df_ln_am))
+    else:
+        risks.append(("low","📉 Lợi nhuận âm","Không có dòng xuất bán nào bị lỗ ✓", None))
+
+    # R4 – Biên LN bất thường theo kỳ
+    if len(df_ln_t) >= 2:
+        mb2 = df_ln_t["Bien"].mean()
+        sb2 = df_ln_t["Bien"].std() or 1
+        anom_kys = df_ln_t[df_ln_t["Bien"] < mb2 - sb2*1.5]
+        if not anom_kys.empty:
+            ky_str = ", ".join(anom_kys[time_col].tolist())
             score += 10
-            risks.append(("medium","🔄 Có đơn xuất bổ sung/thay thế",
-                           f"{len(df_bs)} dòng ({pct_bs:.1f}%) — cần theo dõi"))
+            risks.append(("medium","📊 Biên LN bất thường",
+                           f"Kỳ <b>{ky_str}</b> có biên LN thấp bất thường → nghi có chiết khấu / chương trình đặc biệt", None))
+        else:
+            risks.append(("low","📊 Biên LN","Biên LN ổn định qua các kỳ ✓", None))
 
-    # ── R4: Đơn hàng outlier (giá trị cực lớn) ───────────────
-    if len(df_ban) >= 4:
-        q75 = df_ban["Thành tiền bán"].quantile(0.75)
-        q25 = df_ban["Thành tiền bán"].quantile(0.25)
-        iqr = q75 - q25
-        if iqr > 0:
-            outs = df_ban[df_ban["Thành tiền bán"] > q75 + 3*iqr]
-            if not outs.empty:
-                score += 15
-                risks.append(("medium","📦 Đơn hàng giá trị bất thường (outlier)",
-                               f"{len(outs)} đơn vượt ngưỡng thống kê — kiểm soát hạn mức tín dụng"))
+    # R5 – Tập trung đơn hàng cuối tháng
+    df_cuoi   = df_ban[df_ban["Cuoi_thang"] == True]
+    dt_cuoi   = df_cuoi["Thành tiền bán"].sum()
+    tl_dt_cuoi = (dt_cuoi/tong_dt_ban*100) if tong_dt_ban else 0
+    if tl_dt_cuoi > 40:
+        score += 15
+        risks.append(("high","📅 Tập trung cuối tháng",
+                       f"<b>{tl_dt_cuoi:.1f}%</b> DT ({fmt(dt_cuoi)} VNĐ) tập trung ngày 28–31 — nghi đẩy doanh số / ghi nhận ảo", None))
+    elif tl_dt_cuoi > 25:
+        score += 8
+        risks.append(("medium","📅 Tập trung cuối tháng",
+                       f"{tl_dt_cuoi:.1f}% DT tập trung cuối tháng — kiểm tra thực chất giao nhận", None))
+    else:
+        risks.append(("low","📅 Phân bổ thời gian", f"Đơn hàng phân bổ đều trong tháng ✓ (cuối tháng: {tl_dt_cuoi:.1f}%)", None))
 
-    # ── R5: Biên LN âm trên từng giao dịch ───────────────────
-    don_lo = df_ban[df_ban["Lợi nhuận"] < 0]
-    if not don_lo.empty:
-        pct_lo = len(don_lo)/len(df_ban)*100
-        score += min(20, int(pct_lo))
-        risks.append(("high" if pct_lo>10 else "medium",
-                      "🔴 Có đơn hàng lỗ từng dòng",
-                      f"{len(don_lo)} dòng ({pct_lo:.1f}%) có Lợi nhuận < 0 — bán dưới giá vốn"))
-
-    # ── R6: Giá bán biến động lớn cùng 1 mã hàng ─────────────
-    if "Giá bán" in df_ban.columns and "Tên hàng" in df_ban.columns:
-        gb_cv = (df_ban[df_ban["Giá bán"]>0]
-                 .groupby("Tên hàng")["Giá bán"]
-                 .agg(["mean","std"])
-                 .dropna())
-        gb_cv["CV"] = gb_cv["std"]/gb_cv["mean"]*100
-        gb_cv_high = gb_cv[gb_cv["CV"]>20]
-        if not gb_cv_high.empty:
+    # R6 – Đơn hàng outlier
+    q1v  = df_ban["Thành tiền bán"].quantile(0.25)
+    q3v  = df_ban["Thành tiền bán"].quantile(0.75)
+    iqr  = q3v - q1v
+    if iqr > 0:
+        df_out = df_ban[df_ban["Thành tiền bán"] > q3v + 3*iqr]
+        if not df_out.empty:
             score += 10
-            sp_list = ", ".join(gb_cv_high.index[:3].tolist())
-            risks.append(("medium","💲 Giá bán biến động lớn cùng mã hàng",
-                           f"{len(gb_cv_high)} SP có CV>20%: {sp_list}... — thiếu nhất quán chính sách giá"))
+            risks.append(("medium","📦 Đơn hàng giá trị lớn bất thường",
+                           f"<b>{len(df_out)}</b> đơn vượt 3×IQR — kiểm soát hạn mức tín dụng", df_out))
+        else:
+            risks.append(("low","📦 Quy mô đơn hàng","Không có đơn bất thường về giá trị ✓", None))
 
-    # ── R7: Địa điểm giao phân tán ───────────────────────────
+    # R7 – Xuất bổ sung / thay thế
+    df_bs = df_scope[df_scope["Loai_GD"] == "Xuất bổ sung"]
+    if not df_bs.empty:
+        score += 12
+        risks.append(("medium","🔄 Xuất bổ sung/thay thế",
+                       f"<b>{len(df_bs)}</b> dòng xuất bổ sung/thay thế — giao nhầm, giao thiếu hoặc hàng lỗi", df_bs))
+    else:
+        risks.append(("low","🔄 Xuất bổ sung","Không có đơn xuất bổ sung/thay thế ✓", None))
+
+    # R8 – Địa điểm giao hàng phân tán
     if "Nơi giao hàng" in df_ban.columns:
         n_noi = df_ban["Nơi giao hàng"].nunique()
         if n_noi >= 6:
             score += 10
-            risks.append(("medium","📍 Giao hàng phân tán nhiều địa điểm",
-                           f"{n_noi} địa điểm — nhà thầu nhiều dự án, rủi ro công nợ phân tán, khó thu hồi"))
+            risks.append(("medium","📍 Giao hàng phân tán",
+                           f"Giao tới <b>{n_noi}</b> địa điểm — nhà thầu nhiều dự án, rủi ro phân tán công nợ", None))
         else:
-            risks.append(("low","✅ Số địa điểm giao hàng", f"{n_noi} địa điểm (bình thường)"))
+            risks.append(("low","📍 Địa điểm giao hàng", f"{n_noi} địa điểm — bình thường ✓", None))
 
-    # ── R8: Mua không đều (theo tháng) ───────────────────────
-    n_thang_mua = df_ban["Tháng"].nunique()
-    delta_days  = max((df_ban["Ngày chứng từ"].max()-df_ban["Ngày chứng từ"].min()).days, 1)
-    n_thang_khoang = max(delta_days//30, 1)
-    if n_thang_khoang >= 3 and n_thang_mua/n_thang_khoang < 0.5:
-        score += 10
-        risks.append(("medium","🔁 Tần suất mua không đều",
-                       f"Chỉ mua {n_thang_mua}/{n_thang_khoang} tháng — phụ thuộc dự án, dòng tiền không ổn định"))
+    # R9 – Nhiều kho
+    if "Mã kho" in df_ban.columns and df_ban["Mã kho"].nunique() >= 2:
+        score += 5
+        risks.append(("medium","🏭 Nhiều kho xuất hàng",
+                       f"KH nhận từ <b>{df_ban['Mã kho'].nunique()}</b> kho — kiểm tra giá xuất kho & nhất quán", None))
     else:
-        risks.append(("low","✅ Tần suất mua hàng đều đặn",
-                       f"{n_thang_mua} tháng có giao dịch"))
+        risks.append(("low","🏭 Kho xuất hàng","Xuất từ 1 kho — nhất quán ✓", None))
 
-    # ── R9: Đơn hàng dự án (PO/B-xxx) → rủi ro thanh toán chậm
-    gc_s = df["Ghi chú"].astype(str).str.upper() if "Ghi chú" in df.columns else pd.Series([""]*len(df))
-    df_po = df[gc_s.str.contains(r"PO|B[0-9]{3}|HỢP ĐỒNG", regex=True, na=False)]
-    if not df_po.empty:
-        pct_po = len(df_po)/len(df)*100
-        if pct_po > 30:
-            score += 15
-            risks.append(("medium","📋 Tỷ trọng đơn hàng dự án cao",
-                           f"{pct_po:.0f}% đơn có PO/B-code/Hợp đồng — thanh toán thường NET 30–90 ngày, rủi ro công nợ"))
-        else:
-            risks.append(("low","✅ Tỷ trọng đơn dự án", f"{pct_po:.0f}%"))
+    # R10 – Tần suất mua không đều
+    n_thang_mua   = df_ban["Thang"].nunique()
+    delta_days    = (df_ban["Ngày chứng từ"].max()-df_ban["Ngày chứng từ"].min()).days
+    n_thang_range = max(delta_days//30, 1)
+    if n_thang_mua/n_thang_range < 0.5:
+        score += 10
+        risks.append(("medium","🔁 Mua hàng không đều",
+                       f"Chỉ mua <b>{n_thang_mua}/{n_thang_range}</b> tháng — phụ thuộc dự án, dòng tiền bất ổn", None))
+    else:
+        risks.append(("low","🔁 Tần suất mua", f"Mua đều đặn: {n_thang_mua} tháng có GD ✓", None))
 
-    # ── R10: Khu vực khác nhau so với PKD ────────────────────
-    if "Khu vực" in df_ban.columns and "Mã nhóm KH" in df_ban.columns:
-        kv_unique = df_ban["Khu vực"].dropna().unique()
-        if len(kv_unique) > 1:
-            score += 5
-            risks.append(("medium","🗺️ Giao hàng nhiều khu vực khác nhau",
-                           f"{', '.join(kv_unique)} — chi phí vận chuyển cao, rủi ro giao nhầm"))
+    # R11 – Biên LN tổng thấp
+    if bien_tb < 5:
+        score += 20
+        risks.append(("high","💹 Biên LN tổng thấp",
+                       f"Biên LN tổng = <b>{bien_tb:.1f}%</b> — nguy cơ bán phá giá hoặc chiết khấu quá mức", None))
+    elif bien_tb < 15:
+        score += 8
+        risks.append(("medium","💹 Biên LN tổng", f"Biên LN = <b>{bien_tb:.1f}%</b> — ở mức thấp, cần theo dõi", None))
+    else:
+        risks.append(("low","💹 Biên LN tổng", f"Biên LN = {bien_tb:.1f}% — bình thường ✓", None))
 
-    # ── R11: Đơn hàng cuối tháng tập trung ───────────────────
-    if len(df_ban) >= 10:
-        df_ban["Ngày trong tháng"] = df_ban["Ngày chứng từ"].dt.day
-        cuoi_thang = df_ban[df_ban["Ngày trong tháng"] >= 25]
-        pct_cuoi = len(cuoi_thang)/len(df_ban)*100
-        if pct_cuoi > 40:
-            score += 10
-            risks.append(("medium","📆 Đơn hàng tập trung cuối tháng",
-                           f"{pct_cuoi:.0f}% đơn xuất trong ngày 25–31 — dấu hiệu đẩy doanh số cuối kỳ, tăng rủi ro công nợ"))
+    # R12 – Đơn PO/Dự án (BCCN)
+    if "Ghi chú" in df_scope.columns:
+        gc2    = df_scope["Ghi chú"].astype(str).str.upper()
+        df_po  = df_scope[gc2.str.contains(r"PO|B[0-9]{3}|HỢP ĐỒNG", regex=True, na=False)]
+        if not df_po.empty:
+            gt_po = abs(df_po["Thành tiền bán"].sum())
+            score += 8
+            n_po  = df_po["Số chứng từ"].nunique() if "Số chứng từ" in df_po.columns else len(df_po)
+            risks.append(("medium","📄 Đơn PO/Dự án (BCCN)",
+                           f"<b>{n_po}</b> chứng từ có PO/HĐ ({fmt(gt_po)} VNĐ) — thanh toán thường chậm NET 30–90 ngày, rủi ro công nợ dự án", df_po))
 
-    # ── R12: Chênh lệch đơn giá vận chuyển bất thường ────────
-    if "Đơn giá vận chuyển" in df_ban.columns:
-        vc = df_ban[df_ban["Đơn giá vận chuyển"]>0]["Đơn giá vận chuyển"]
-        if len(vc) >= 5:
-            vc_mean = vc.mean()
-            vc_hi   = vc[vc > vc_mean * 3]
-            if not vc_hi.empty:
-                score += 5
-                risks.append(("medium","🚚 Đơn giá vận chuyển bất thường",
-                               f"{len(vc_hi)} đơn có đơn giá VC > 3× trung bình ({vc_mean:.0f} VNĐ/kg)"))
+    # ══ TỔNG ĐIỂM ══
+    st.markdown("---")
+    n_high   = sum(1 for l,_,_,_ in risks if l=="high")
+    n_medium = sum(1 for l,_,_,_ in risks if l=="medium")
+    n_low    = sum(1 for l,_,_,_ in risks if l=="low")
 
-    # ── Hiển thị điểm rủi ro ─────────────────────────────────
     if score >= 60:
         color, label = "#e74c3c", "🔴 RỦI RO CAO"
     elif score >= 30:
@@ -741,57 +827,40 @@ with tab_risk:
         color, label = "#26c281", "🟢 RỦI RO THẤP"
 
     st.markdown(f"""
-    <div style='background:#1a2035;border-radius:12px;padding:22px;text-align:center;margin:10px 0 18px 0;'>
-        <div style='font-size:38px;font-weight:900;color:{color};'>{label}</div>
-        <div style='font-size:16px;color:#9aa0b0;margin-top:6px;'>
-            Điểm rủi ro tổng hợp: <b style='color:{color};font-size:20px;'>{score}/100</b>
+    <div style='background:#1a2035;border-radius:10px;padding:20px;text-align:center;margin:10px 0 18px 0;'>
+        <div style='font-size:32px;font-weight:900;color:{color};'>{label}</div>
+        <div style='font-size:15px;color:#9aa0b0;margin-top:8px;'>
+            Điểm rủi ro: <b style='color:{color}'>{score}/130</b>
+            &nbsp;&nbsp;|&nbsp;&nbsp;
+            🔴 {n_high} cao &nbsp; 🟡 {n_medium} trung bình &nbsp; 🟢 {n_low} thấp
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    for lvl, title, detail in risks:
-        st.markdown(
-            f'<div class="risk-{lvl}"><b>{title}</b><br><span style="font-size:13px;opacity:0.85;">{detail}</span></div>',
-            unsafe_allow_html=True)
+    for lvl, cat, msg, detail in risks:
+        st.markdown(f'<div class="risk-{lvl}"><b>[{cat}]</b>&nbsp; {msg}</div>', unsafe_allow_html=True)
+        if detail is not None and not detail.empty and lvl in ["high","medium"]:
+            show_c = [c for c in ["Số chứng từ","Ngày chứng từ","Tên khách hàng","Tên hàng",
+                                   "Thành tiền bán","Lợi nhuận","Giá bán","Giá vốn","Ghi chú"] if c in detail.columns]
+            with st.expander(f"📋 Chi tiết – {cat}"):
+                d2 = detail[show_c].head(50).copy()
+                for c in ["Thành tiền bán","Lợi nhuận","Giá bán","Giá vốn"]:
+                    if c in d2.columns:
+                        d2[c] = d2[c].map(fmt)
+                st.dataframe(d2, use_container_width=True, hide_index=True)
 
-    # ── BCCN ─────────────────────────────────────────────────
-    st.markdown('<div class="section-title">📄 BCCN – Phân tích công nợ & thanh toán</div>', unsafe_allow_html=True)
-
-    c1,c2,c3,c4 = st.columns(4)
-    c1.metric("📋 Đơn có PO/HĐ",    df_po["Số chứng từ"].nunique() if "Số chứng từ" in df_po.columns and not df_po.empty else 0)
-    c2.metric("↩️ Phiếu trả hàng", df_tra["Số chứng từ"].nunique() if "Số chứng từ" in df_tra.columns and not df_tra.empty else 0)
-    c3.metric("🔄 Xuất bổ sung",   df_bs["Số chứng từ"].nunique()  if "Số chứng từ" in df_bs.columns  and not df_bs.empty  else 0)
-    c4.metric("💰 GT trả hàng",    fmt(tong_tra_v)+" VNĐ")
-
+    # BCCN Note
+    st.markdown("---")
+    st.markdown('<div class="section-title">📄 BCCN – Lưu ý Thanh toán & Công nợ</div>', unsafe_allow_html=True)
     st.markdown("""
-    <div class="info-box">
-    <b>⚠️ File OM_RPT_055 không chứa ngày thanh toán thực tế.</b> Để phân tích BCCN đầy đủ cần bổ sung:<br>
-    &nbsp;• <b>Sổ AR Aging</b> → số ngày tồn đọng, hạn mức tín dụng<br>
-    &nbsp;• <b>Lịch sử thanh toán</b> → thói quen TT (NET 30/60/90 ngày)<br><br>
-    <b>Dấu hiệu từ dữ liệu hiện có:</b><br>
-    &nbsp;• <b>B-xxx / PO</b> trong ghi chú → đơn dự án → TT chậm, NET 30–90<br>
-    &nbsp;• <b>Trả hàng</b> → tranh chấp → kéo dài công nợ<br>
-    &nbsp;• <b>Nhiều địa điểm giao</b> → nhà thầu nhiều công trình → phân tán công nợ
+    <div class="risk-info">
+    ⚠️ File OM_RPT_055 <b>không chứa ngày thanh toán thực tế</b>. Để phân tích BCCN đầy đủ cần bổ sung:<br>
+    &nbsp;&nbsp;• <b>Sổ AR Aging</b> → số ngày tồn đọng, quá hạn, hạn mức tín dụng<br>
+    &nbsp;&nbsp;• <b>Lịch sử thanh toán</b> → thói quen NET 30/60/90<br><br>
+    <b>Dấu hiệu nhận biết từ dữ liệu hiện có:</b><br>
+    &nbsp;&nbsp;• Ghi chú <b>B-xxx / PO</b> → đơn dự án → TT chậm, phụ thuộc chủ đầu tư<br>
+    &nbsp;&nbsp;• <b>Trả hàng</b> → tranh chấp → kéo dài & phức tạp hoá công nợ<br>
+    &nbsp;&nbsp;• <b>Nhiều địa điểm giao</b> → công nợ phân tán nhiều công trình<br>
+    &nbsp;&nbsp;• <b>Đơn cuối tháng giá trị lớn</b> → kiểm tra giao nhận thực tế trước khi ghi nhận DT
     </div>
     """, unsafe_allow_html=True)
-
-    if not df_po.empty:
-        with st.expander(f"📋 Chi tiết {len(df_po)} đơn có PO / mã dự án"):
-            po_cols = [c for c in ["Số chứng từ","Ngày chứng từ","Tên khách hàng",
-                                    "Tên hàng","Thành tiền bán","Ghi chú"] if c in df_po.columns]
-            df_po_s = df_po[po_cols].drop_duplicates().copy()
-            if "Thành tiền bán" in df_po_s.columns:
-                df_po_s["Thành tiền bán"] = df_po_s["Thành tiền bán"].map(fmt)
-            st.dataframe(df_po_s, use_container_width=True, hide_index=True)
-
-    if not don_lo.empty:
-        with st.expander(f"🔴 Chi tiết {len(don_lo)} đơn hàng lỗ"):
-            lo_cols = [c for c in ["Số chứng từ","Ngày chứng từ","Tên khách hàng",
-                                    "Tên hàng","Giá bán","Giá vốn",
-                                    "Thành tiền bán","Lợi nhuận","Ghi chú"] if c in don_lo.columns]
-            df_lo_s = don_lo[lo_cols].copy()
-            for cc in ["Thành tiền bán","Lợi nhuận","Giá bán","Giá vốn"]:
-                if cc in df_lo_s.columns:
-                    df_lo_s[cc] = pd.to_numeric(df_lo_s[cc], errors="coerce").map(
-                        lambda x: fmt(x) if pd.notna(x) else "")
-            st.dataframe(df_lo_s, use_container_width=True, hide_index=True)
