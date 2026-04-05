@@ -220,33 +220,41 @@ if df_all.empty:
 # ══════════════════════════════════════════════════════════════
 #  SIDEBAR FILTERS
 # ══════════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════
+#  SIDEBAR FILTERS
+# ══════════════════════════════════════════════════════════════
 st.sidebar.markdown("---")
 st.sidebar.markdown("## 🔍 Bộ lọc")
 
+# Bộ lọc Phòng Kinh Doanh (Mã nhóm KH)
+if "Mã nhóm KH" in df_all.columns:
+    phong_list = sorted(df_all["Mã nhóm KH"].dropna().astype(str).unique())
+    phong_chon = st.sidebar.multiselect("🏢 Phòng Kinh Doanh (Mã nhóm KH)", phong_list, default=phong_list)
+else:
+    phong_chon = []
+
+# Bộ lọc Khu vực
+if "Khu vực" in df_all.columns:
+    kv_list = sorted(df_all["Khu vực"].dropna().astype(str).unique())
+    kv_chon = st.sidebar.multiselect("🌍 Khu vực", kv_list, default=kv_list)
+else:
+    kv_chon = []
+
+# Bộ lọc Tên Khách Hàng
 kh_list = sorted(df_all["Tên khách hàng"].dropna().astype(str).unique())
 kh = st.sidebar.selectbox("👤 Khách hàng", kh_list)
 
+# Bộ lọc Quý
 quy_list = sorted(df_all["Quý"].dropna().unique())
 quy_chon = st.sidebar.multiselect("📅 Quý", quy_list, default=quy_list)
 
-df = df_all[
-    (df_all["Tên khách hàng"].astype(str) == kh) &
-    (df_all["Quý"].isin(quy_chon))
-].copy()
-
-df_ban = df[df["Loại GD"] == "Xuất bán"].copy()
-
-# Header
-ngay_min = df["Ngày chứng từ"].min()
-ngay_max = df["Ngày chứng từ"].max()
-st.markdown(f"# 📊 Phân tích: **{kh}**")
-st.markdown(f"*Dữ liệu: {ngay_min.strftime('%d/%m/%Y') if pd.notna(ngay_min) else '?'} → "
-            f"{ngay_max.strftime('%d/%m/%Y') if pd.notna(ngay_max) else '?'} "
-            f"| {len(df):,} dòng | {df['Số chứng từ'].nunique() if 'Số chứng từ' in df.columns else '?'} chứng từ*")
-
-if df_ban.empty:
-    st.warning("Không có dữ liệu xuất bán cho bộ lọc đã chọn.")
-    st.stop()
+# Áp dụng tất cả bộ lọc
+df = df_all.copy()
+if phong_chon:
+    df = df[df["Mã nhóm KH"].astype(str).isin(phong_chon)]
+if kv_chon:
+    df = df[df["Khu vực"].astype(str).isin(kv_chon)]
+df = df[(df["Tên khách hàng"].astype(str) == kh) & (df["Quý"].isin(quy_chon))].copy()
 
 # ══════════════════════════════════════════════════════════════
 #  TABS
