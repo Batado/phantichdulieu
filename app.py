@@ -272,14 +272,16 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 #  TAB 1
 # ══════════════════════════════════════════════════════════════
 with tab1:
-    st.markdown('<div class="section-title">📦 Thói quen mua hàng theo nhóm sản phẩm</div>', unsafe_allow_html=True)
+    if "Nhóm SP" not in df_ban.columns or df_ban.empty:
+        st.warning("Không có dữ liệu Nhóm SP để phân tích.")
+        st.stop()
 
     df_nhom = (df_ban.groupby("Nhóm SP")
                .agg(So_lan=("Nhóm SP", "count"),
                     KL_tan=("Khối lượng", lambda x: round(x.sum() / 1000, 2)),
                     DT=("Thành tiền bán", "sum"))
-               .reset_index().sort_values("DT", ascending=False))
-
+               .reset_index().sort_values("DT", ascending=False)) 
+            
     c1, c2 = st.columns(2)
     with c1:
         fig = px.bar(df_nhom, x="Nhóm SP", y="DT", color="Nhóm SP", text_auto=".3s",
