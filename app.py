@@ -256,6 +256,12 @@ if kv_chon:
     df = df[df["Khu vực"].astype(str).isin(kv_chon)]
 df = df[(df["Tên khách hàng"].astype(str) == kh) & (df["Quý"].isin(quy_chon))].copy()
 
+# Tạo df_ban cho các tab phân tích
+df_ban = df[df["Loại GD"] == "Xuất bán"].copy()
+if df_ban.empty:
+    st.warning("Không có dữ liệu xuất bán cho bộ lọc đã chọn.")
+    st.stop()
+
 # ══════════════════════════════════════════════════════════════
 #  TABS
 # ══════════════════════════════════════════════════════════════
