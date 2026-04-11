@@ -217,11 +217,10 @@ if df_all.empty:
     st.error("Không có dữ liệu hợp lệ. Vui lòng kiểm tra file và thử lại.")
     st.stop()
 
+
+
 # ══════════════════════════════════════════════════════════════
-#  SIDEBAR FILTERS
-# ══════════════════════════════════════════════════════════════
-# ══════════════════════════════════════════════════════════════
-#  SIDEBAR FILTERS
+#  SIDEBAR FILTERS (lọc theo PKD → Điểm rủi ro → Khách hàng)
 # ══════════════════════════════════════════════════════════════
 st.sidebar.markdown("---")
 st.sidebar.markdown("## 🔍 Bộ lọc")
@@ -229,43 +228,99 @@ st.sidebar.markdown("## 🔍 Bộ lọc")
 # Bộ lọc Phòng Kinh Doanh (Mã nhóm KH)
 if "Mã nhóm KH" in df_all.columns:
     phong_list = sorted(df_all["Mã nhóm KH"].dropna().astype(str).unique())
-    phong_chon = st.sidebar.multiselect("🏢 Phòng Kinh Doanh (Mã nhóm KH)", phong_list, default=phong_list)
+    phong_chon = st.sidebar.selectbox("🏢 Phòng Kinh Doanh (Mã nhóm KH)", phong_list)
+    df_phong = df_all[df_all["Mã nhóm KH"].astype(str) == phong_chon].copy()
 else:
-    phong_chon = []
+    phong_chon = None
+    df_phong = df_all.copy()
 
-# Lọc theo Phòng Kinh Doanh trước
-df_phong = df_all.copy()
-if phong_chon:
-    df_phong = df_phong[df_phong["Mã nhóm KH"].astype(str).isin(phong_chon)]
+# --- Tính điểm rủi ro cho từng khách hàng trong phòng ---
+def tinh_diem_rui_ro(df_ban, df_tra2, df_bs):
+    score = 0
+    tong_ban = df_ban["Thành tiền bán"].sum()
+    tong_tra = abs(df_tra2["Thành tiền bán"].sum())
+    tl_tra = (tong_tra / tong_ban * 100) if tong_ban > 0 else 0
+    if tl_tra > 10: score += 30
+    elif tl_tra > 3: score += 15
 
-# Bộ lọc Khu vực theo Phòng Kinh Doanh
-if "Khu vực" in df_phong.columns:
-    kv_list = sorted(df_phong["Khu vực"].dropna().astype(str).unique())
-    kv_chon = st.sidebar.multiselect("🌍 Khu vực", kv_list, default=kv_list)
+    tong_ln = df_ban["Lợi nhuận"].sum()
+    bien = (tong_ln / tong_ban * 100) if tong_ban > 0 else 0
+    if bien < 5: score += 25
+    elif bien < 15: score += 10
+
+    if not df_bs.empty: score += 15
+    return score
+
+risk_scores = []
+for khach in df_phong["Tên khách hàng"].dropna().unique():
+    df_kh = df_phong[df_phong["Tên khách hàng"] == khach]
+    df_ban_kh = df_kh[df_kh["Loại GD"] == "Xuất bán"]
+    df_tra_kh = df_kh[df_kh["Loại GD"] == "Trả hàng"]
+    df_bs_kh  = df_kh[df_kh["Loại GD"] == "Xuất bổ sung"]
+
+    score = tinh_diem_rui_ro(df_ban_kh, df_tra_kh, df_bs_kh)
+    risk_scores.append((khach, score))
+
+df_risk = pd.DataFrame(risk_scores, columns=["Tên khách hàng", "Điểm rủi ro"])
+df_risk_sorted = df_risk.sort_values("Điểm rủi ro", ascending=True)
+
+# Bộ lọc Khách hàng theo điểm rủi ro
+if not df_risk_sorted.empty:
+    kh_list = df_risk_sorted["Tên khách hàng"].tolist()
+    kh = st.sidebar.selectbox("👤 Khách hàng (sắp xếp theo rủi ro)", kh_list)
 else:
-    kv_chon = []
-
-df_kv = df_phong.copy()
-if kv_chon:
-    df_kv = df_kv[df_kv["Khu vực"].astype(str).isin(kv_chon)]
-
-# Bộ lọc Tên Khách Hàng theo Phòng Kinh Doanh + Khu vực
-kh_list = sorted(df_kv["Tên khách hàng"].dropna().astype(str).unique())
-kh = st.sidebar.selectbox("👤 Khách hàng", kh_list)
+    kh = None
 
 # Bộ lọc Quý
-quy_list = sorted(df_kv["Quý"].dropna().unique())
-quy_chon = st.sidebar.multiselect("📅 Quý", quy_list, default=quy_list)
+if "Quý" in df_phong.columns:
+    quy_list = sorted(df_phong["Quý"].dropna().unique())
+    quy_chon = st.sidebar.multiselect("📅 Quý", quy_list, default=quy_list)
+else:
+    quy_chon = []
+# Sau khi chọn khách hàng
+if kh:
+    df_kh = df_phong[df_phong["Tên khách hàng"].astype(str) == kh]
+    df_ban_kh = df_kh[df_kh["Loại GD"] == "Xuất bán"]
+    df_tra_kh = df_kh[df_kh["Loại GD"] == "Trả hàng"]
+    df_bs_kh  = df_kh[df_kh["Loại GD"] == "Xuất bổ sung"]
 
+    # Tính điểm rủi ro cho khách hàng đang chọn
+    score = tinh_diem_rui_ro(df_ban_kh, df_tra_kh, df_bs_kh)
+
+    # Xác định mức rủi ro
+    if score >= 50:
+        color, label = "#e74c3c", "🔴 RỦI RO CAO"
+    elif score >= 25:
+        color, label = "#f39c12", "🟡 RỦI RO TRUNG BÌNH"
+    else:
+        color, label = "#26c281", "🟢 RỦI RO THẤP"
+
+    # Hiển thị ngay trong sidebar
+    st.sidebar.markdown(f"""
+    <div style='background:#1a2035;border-radius:8px;padding:10px;text-align:center;margin:8px 0;'>
+        <div style='font-size:18px;font-weight:700;color:{color};'>{label}</div>
+        <div style='font-size:14px;color:#9aa0b0;margin-top:4px;'>
+            Điểm rủi ro: <b style='color:{color}'>{score}/100</b>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
 # Áp dụng tất cả bộ lọc
-df = df_kv[(df_kv["Tên khách hàng"].astype(str) == kh) & (df_kv["Quý"].isin(quy_chon))].copy()
+df = df_phong.copy()
+if kh:
+    df = df[df["Tên khách hàng"].astype(str) == kh]
+if quy_chon:
+    df = df[df["Quý"].isin(quy_chon)]
 
 # Tạo df_ban cho các tab phân tích
-df_ban = df[df["Loại GD"] == "Xuất bán"].copy()
+if "Loại GD" in df.columns:
+    df_ban = df[df["Loại GD"] == "Xuất bán"].copy()
+else:
+    df_ban = pd.DataFrame()
+
 if df_ban.empty:
     st.warning("Không có dữ liệu xuất bán cho bộ lọc đã chọn.")
     st.stop()
-
 
 # ══════════════════════════════════════════════════════════════
 #  TABS
@@ -533,6 +588,28 @@ with tab5:
 #  TAB 6 – RỦI RO & BCCN
 # ══════════════════════════════════════════════════════════════
 with tab6:
+    st.markdown('<div class="section-title">📄 BCCN – Phân tích thanh toán & công nợ</div>', unsafe_allow_html=True)
+
+    # Tính điểm rủi ro cho từng khách hàng trong phòng đã chọn
+    risk_scores = []
+    df_phong = df_all[df_all["Mã nhóm KH"].astype(str) == phong_chon]
+
+    for khach in df_phong["Tên khách hàng"].dropna().unique():
+        df_kh = df_phong[df_phong["Tên khách hàng"] == khach]
+        df_ban_kh = df_kh[df_kh["Loại GD"] == "Xuất bán"]
+        df_tra_kh = df_kh[df_kh["Loại GD"] == "Trả hàng"]
+        df_bs_kh  = df_kh[df_kh["Loại GD"] == "Xuất bổ sung"]
+
+        score = tinh_diem_rui_ro(df_ban_kh, df_tra_kh, df_bs_kh)
+        risk_scores.append((khach, score))
+
+    df_risk = pd.DataFrame(risk_scores, columns=["Tên khách hàng", "Điểm rủi ro"])
+    df_risk_sorted = df_risk.sort_values("Điểm rủi ro", ascending=True)
+
+    st.markdown("### 📉 Danh sách khách hàng theo điểm rủi ro (thấp → cao)")
+    st.dataframe(df_risk_sorted, use_container_width=True, hide_index=True)
+
+    st.info("Chưa có dữ liệu điểm rủi ro để sắp xếp.")
     st.markdown('<div class="section-title">📄 BCCN – Phân tích thanh toán & công nợ</div>', unsafe_allow_html=True)
 
     ghi_chu_s = df["Ghi chú"].astype(str).str.upper() if "Ghi chú" in df.columns else pd.Series([""] * len(df))
